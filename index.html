@@ -1864,6 +1864,7 @@
     getAuth,
     GoogleAuthProvider,
     signInWithRedirect,
+    signInWithPopup,
     getRedirectResult,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -1961,31 +1962,36 @@
 
   googleBtn.addEventListener('click', async () => {
     errorEl.textContent = '';
+    errorEl.style.color = '';
     googleBtn.disabled = true;
     try{
-      // Редирект вместо всплывающего окна — надёжнее на мобильных браузерах,
-      // где popup-окна не могут передать результат входа обратно в основную страницу.
-      await signInWithRedirect(auth, googleProvider);
-    }catch(err){
-      errorEl.textContent = friendlyError(err) + ' [debug: ' + (err.code || err.message) + ']';
+      // Сначала пробуем popup — если браузер его не заблокирует, вход происходит
+      // сразу, без перезагрузки страницы и без риска потерять состояние при переходе.
+      await signInWithPopup(auth, googleProvider);
       googleBtn.disabled = false;
+    }catch(err){
+      const popupBlockedCodes = ['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request'];
+      if(popupBlockedCodes.includes(err.code)){
+        // Popup не сработал (заблокирован или окружение не поддерживает) — пробуем редирект как запасной вариант
+        try{
+          await signInWithRedirect(auth, googleProvider);
+        }catch(redirectErr){
+          errorEl.textContent = friendlyError(redirectErr);
+          googleBtn.disabled = false;
+        }
+      }else{
+        errorEl.textContent = friendlyError(err);
+        googleBtn.disabled = false;
+      }
     }
   });
 
-  // После возврата со страницы Google эта проверка ловит результат входа
-  // (и любые ошибки, если что-то пошло не так во время редиректа).
-  // Временно показываем результат прямо в интерфейсе для диагностики.
+  // На случай, если сработал запасной вариант с редиректом — ловим результат при возврате.
   getRedirectResult(auth).then((result) => {
-    if(result && result.user){
-      errorEl.style.color = '#8FD19E';
-      errorEl.textContent = '[debug] Redirect result: пользователь получен (' + result.user.email + ')';
-    }else{
-      errorEl.style.color = '';
-      errorEl.textContent = '[debug] Redirect result: пусто (result === null) — значит браузер не увидел, что был возврат с Google.';
-    }
+    // result === null здесь — совершенно нормально, если редирект вообще не использовался.
   }).catch((err) => {
     errorEl.style.color = '';
-    errorEl.textContent = '[debug] Redirect error: ' + (err && (err.code || err.message) || 'unknown');
+    errorEl.textContent = friendlyError(err);
   });
 
   emailForm.addEventListener('submit', async (e) => {
@@ -2189,4 +2195,4 @@
 </script>
 
 </body>
-  </html>
+</html>
