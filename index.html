@@ -227,6 +227,92 @@
     background:rgba(227,165,66,0.08);
   }
 
+  /* --- Кнопка выбора режима + выпадающее меню --- */
+  .mode-selector{
+    position:relative;
+    margin-top:14px;
+  }
+  .mode-trigger{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    width:100%;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:999px;
+    padding:8px 14px;
+    font-size:12.5px;
+    font-family:var(--font-body);
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .mode-trigger:hover{border-color:var(--amber-dim);}
+  .mode-selector.open .mode-trigger{
+    border-color:var(--amber);
+    background:rgba(227,165,66,0.06);
+  }
+  .mode-trigger-dot{
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--amber);
+    flex-shrink:0;
+  }
+  #modeTriggerLabel{ flex:1; text-align:left; }
+  .mode-trigger-chevron{
+    width:15px;height:15px;
+    flex-shrink:0;
+    color:var(--text-dim);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);
+  }
+  .mode-selector.open .mode-trigger-chevron{
+    transform:rotate(180deg);
+    color:var(--amber);
+  }
+  .mode-dropdown{
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    z-index:20;
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:6px;
+    box-shadow:0 12px 28px rgba(0,0,0,0.35);
+
+    max-height:0;
+    opacity:0;
+    transform:translateY(-6px) scale(0.98);
+    pointer-events:none;
+    overflow:hidden;
+    transition:max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s ease, transform .22s cubic-bezier(.4,0,.2,1);
+  }
+  .mode-selector.open .mode-dropdown{
+    max-height:220px;
+    opacity:1;
+    transform:translateY(0) scale(1);
+    pointer-events:auto;
+  }
+  .mode-dropdown .mode-btn{
+    flex:none;
+    width:100%;
+    text-align:left;
+    border-radius:9px;
+    border-color:transparent;
+    background:transparent;
+  }
+  .mode-dropdown .mode-btn:hover{
+    background:rgba(227,165,66,0.06);
+  }
+  .mode-dropdown .mode-btn.active{
+    background:rgba(227,165,66,0.1);
+    border-color:var(--amber-dim);
+  }
+
   /* trail dots divider */
   .trail{
     height:16px;
@@ -664,6 +750,13 @@
     border-top:1px solid var(--line);
     flex-shrink:0;
   }
+  .drawer-user-info{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    overflow:hidden;
+    flex:1;
+  }
   #userEmailLabel{
     font-size:11.5px;
     color:var(--text-dim);
@@ -671,15 +764,122 @@
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-  #signOutBtn{
+  .user-method-badge{
+    font-size:10px;
+    color:var(--amber-dim);
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    width:fit-content;
+  }
+  #accountSettingsBtn{
     background:transparent;
     border:1px solid var(--line);
     color:var(--text-dim);
     border-radius:7px;
-    padding:5px 10px;
-    font-size:11.5px;
+    width:28px;height:28px;
+    display:flex;align-items:center;justify-content:center;
     cursor:pointer;
     flex-shrink:0;
+  }
+  #accountSettingsBtn:hover{color:var(--amber);border-color:var(--amber);}
+  #accountSettingsBtn svg{width:15px;height:15px;}
+
+  /* --- Модалка настроек аккаунта --- */
+  .account-modal-overlay{
+    position:fixed;inset:0;
+    background:rgba(10,12,18,0.6);
+    z-index:110;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .account-modal-overlay.hide{display:none;}
+  .account-modal{
+    width:100%;
+    max-width:340px;
+    max-height:85vh;
+    overflow-y:auto;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+  }
+  .account-modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .account-modal-title{
+    font-family:var(--font-display);
+    font-size:17px;
+    font-weight:600;
+  }
+  #closeAccountModal{
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    font-size:18px;
+    cursor:pointer;
+    padding:2px 6px;
+  }
+  #closeAccountModal:hover{color:var(--amber);}
+  .account-modal-row{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:12.5px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .account-modal-label{color:var(--text-dim);}
+  .account-modal-row span:last-child{
+    color:var(--text);
+    text-align:right;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .account-modal-subtitle{
+    font-size:12.5px;
+    font-weight:600;
+    margin:16px 0 10px;
+  }
+  .account-modal-hint{
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin:0 0 10px;
+    line-height:1.5;
+  }
+  .account-danger-btn{
+    width:100%;
+    background:transparent;
+    border:1px solid #E6675C;
+    color:#E6675C;
+    border-radius:9px;
+    padding:10px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .account-danger-btn:hover{background:rgba(230,103,92,0.1);}
+  .account-modal-google-note{
+    font-size:11.5px;
+    color:var(--text-dim);
+    line-height:1.5;
+  }
+  #signOutBtn{
+    width:100%;
+    margin-top:16px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    border-radius:9px;
+    padding:9px;
+    font-size:12.5px;
+    cursor:pointer;
   }
   #signOutBtn:hover{color:var(--amber);border-color:var(--amber);}
   .auth-resend-btn{
@@ -703,6 +903,16 @@
     padding:2px;
   }
   .auth-forgot-btn:hover{color:var(--amber);}
+  .btn-spinner{
+    display:inline-block;
+    width:13px;height:13px;
+    border-radius:50%;
+    border:2px solid rgba(36,27,10,0.35);
+    border-top-color:#241B0A;
+    animation:auth-spin 0.7s linear infinite;
+    vertical-align:-2px;
+    margin-right:6px;
+  }
 </style>
 </head>
 <body>
@@ -774,10 +984,19 @@
     </button>
   </div>
 
-  <div class="mode-row" id="modeRow">
-    <button class="mode-btn active" data-mode="scout">Скаут · быстро</button>
-    <button class="mode-btn" data-mode="pathfinder">Следопыт · сбаланс.</button>
-    <button class="mode-btn" data-mode="navigator">Штурман · глубоко</button>
+  <div class="mode-selector" id="modeSelector">
+    <button class="mode-trigger" id="modeTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+      <span class="mode-trigger-dot"></span>
+      <span id="modeTriggerLabel">Скаут · быстро</span>
+      <svg class="mode-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </button>
+    <div class="mode-dropdown" id="modeRow">
+      <button class="mode-btn active" data-mode="scout">Скаут · быстро</button>
+      <button class="mode-btn" data-mode="pathfinder">Следопыт · сбаланс.</button>
+      <button class="mode-btn" data-mode="navigator">Штурман · глубоко</button>
+    </div>
   </div>
 </header>
 
@@ -834,8 +1053,55 @@
   </div>
   <div class="drawer-list" id="chatList"></div>
   <div class="drawer-user" id="drawerUser">
-    <span id="userEmailLabel"></span>
-    <button id="signOutBtn" type="button">Выйти</button>
+    <div class="drawer-user-info">
+      <span id="userEmailLabel"></span>
+      <span id="userMethodBadge" class="user-method-badge"></span>
+    </div>
+    <button id="accountSettingsBtn" type="button" aria-label="Настройки аккаунта" title="Настройки аккаунта">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="account-modal-overlay hide" id="accountModalOverlay">
+    <div class="account-modal">
+      <div class="account-modal-header">
+        <div class="account-modal-title">Аккаунт</div>
+        <button id="closeAccountModal" type="button">✕</button>
+      </div>
+
+      <div class="account-modal-row">
+        <span class="account-modal-label">Email</span>
+        <span id="accountEmailValue"></span>
+      </div>
+      <div class="account-modal-row">
+        <span class="account-modal-label">Способ входа</span>
+        <span id="accountMethodValue"></span>
+      </div>
+
+      <div id="changePasswordSection">
+        <div class="account-modal-subtitle">Сменить пароль</div>
+        <input id="currentPasswordInput" class="auth-input" type="password" placeholder="Текущий пароль" autocomplete="current-password">
+        <input id="newPasswordInput" class="auth-input" type="password" placeholder="Новый пароль (мин. 6 символов)" autocomplete="new-password">
+        <div id="changePasswordError" class="auth-error"></div>
+        <button id="changePasswordBtn" class="auth-submit-btn" type="button">Сменить пароль</button>
+      </div>
+
+      <div id="googleAccountNote" class="account-modal-google-note" style="display:none;margin-top:16px;">
+        Ты вошёл через Google — пароля у этого способа входа нет, менять нечего.
+      </div>
+
+      <div class="account-modal-danger">
+        <div class="account-modal-subtitle">Удаление аккаунта</div>
+        <p class="account-modal-hint">Необратимо: аккаунт и все твои чаты будут удалены полностью.</p>
+        <div id="deleteAccountError" class="auth-error"></div>
+        <button id="deleteAccountBtn" class="account-danger-btn" type="button">Удалить аккаунт</button>
+      </div>
+
+      <button id="signOutBtn" type="button">Выйти из аккаунта</button>
+    </div>
   </div>
   <div class="drawer-footer">
     <button id="newChatBtn">
@@ -1181,6 +1447,7 @@
     renderAttachPreview();
     modeRow.querySelectorAll('.mode-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.mode === currentMode);
+      if(b.dataset.mode === currentMode) modeTriggerLabel.textContent = b.textContent;
     });
     renderMessagesFromHistory(history);
     persistChats();
@@ -1211,6 +1478,7 @@
     drawerOverlay.classList.remove('show');
     chatDrawer.classList.remove('show');
   }
+  window.closeDrawer = closeDrawer; // нужно для кнопки настроек аккаунта в Firebase-модуле
 
   openChatsBtn.addEventListener('click', openDrawer);
   closeDrawerBtn.addEventListener('click', closeDrawer);
@@ -1426,6 +1694,7 @@
     history = active.history || [];
     modeRow.querySelectorAll('.mode-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.mode === currentMode);
+      if(b.dataset.mode === currentMode) modeTriggerLabel.textContent = b.textContent;
     });
     renderMessagesFromHistory(history);
     persistChats();
@@ -1462,12 +1731,37 @@
     });
   }
 
+  const modeSelector = document.getElementById('modeSelector');
+  const modeTrigger = document.getElementById('modeTrigger');
+  const modeTriggerLabel = document.getElementById('modeTriggerLabel');
+
+  function closeModeDropdown(){
+    modeSelector.classList.remove('open');
+    modeTrigger.setAttribute('aria-expanded', 'false');
+  }
+  function toggleModeDropdown(){
+    const willOpen = !modeSelector.classList.contains('open');
+    modeSelector.classList.toggle('open', willOpen);
+    modeTrigger.setAttribute('aria-expanded', String(willOpen));
+  }
+
+  modeTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleModeDropdown();
+  });
+
+  document.addEventListener('click', (e) => {
+    if(!modeSelector.contains(e.target)) closeModeDropdown();
+  });
+
   modeRow.addEventListener('click', (e) => {
     const btn = e.target.closest('.mode-btn');
     if(!btn) return;
     modeRow.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentMode = btn.dataset.mode;
+    modeTriggerLabel.textContent = btn.textContent;
+    closeModeDropdown();
     saveState();
   });
 
@@ -1869,6 +2163,11 @@
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     sendPasswordResetEmail,
+    updatePassword,
+    deleteUser,
+    reauthenticateWithCredential,
+    reauthenticateWithPopup,
+    EmailAuthProvider,
     signOut,
     onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -1909,6 +2208,134 @@
   const switchBtn = document.getElementById('authSwitchBtn');
   const userEmailLabel = document.getElementById('userEmailLabel');
   const signOutBtn = document.getElementById('signOutBtn');
+  const userMethodBadge = document.getElementById('userMethodBadge');
+  const accountSettingsBtn = document.getElementById('accountSettingsBtn');
+  const accountModalOverlay = document.getElementById('accountModalOverlay');
+  const closeAccountModal = document.getElementById('closeAccountModal');
+  const accountEmailValue = document.getElementById('accountEmailValue');
+  const accountMethodValue = document.getElementById('accountMethodValue');
+  const changePasswordSection = document.getElementById('changePasswordSection');
+  const googleAccountNote = document.getElementById('googleAccountNote');
+  const currentPasswordInput = document.getElementById('currentPasswordInput');
+  const newPasswordInput = document.getElementById('newPasswordInput');
+  const changePasswordError = document.getElementById('changePasswordError');
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+  const deleteAccountError = document.getElementById('deleteAccountError');
+
+  function getSignInMethod(user){
+    const providerId = user.providerData[0] && user.providerData[0].providerId;
+    return providerId === 'google.com' ? 'google' : 'password';
+  }
+
+  function openAccountModal(){
+    const user = auth.currentUser;
+    if(!user) return;
+    const method = getSignInMethod(user);
+    accountEmailValue.textContent = user.email || '—';
+    accountMethodValue.textContent = method === 'google' ? 'Google' : 'Email + пароль';
+    changePasswordSection.style.display = method === 'google' ? 'none' : '';
+    googleAccountNote.style.display = method === 'google' ? '' : 'none';
+    currentPasswordInput.value = '';
+    newPasswordInput.value = '';
+    changePasswordError.textContent = '';
+    deleteAccountError.textContent = '';
+    resetDeleteButton();
+    accountModalOverlay.classList.remove('hide');
+  }
+
+  function closeAccountModalFn(){
+    accountModalOverlay.classList.add('hide');
+  }
+
+  accountSettingsBtn.addEventListener('click', () => {
+    window.closeDrawer();
+    openAccountModal();
+  });
+  closeAccountModal.addEventListener('click', closeAccountModalFn);
+  accountModalOverlay.addEventListener('click', (e) => {
+    if(e.target === accountModalOverlay) closeAccountModalFn();
+  });
+
+  changePasswordBtn.addEventListener('click', async () => {
+    changePasswordError.textContent = '';
+    const user = auth.currentUser;
+    if(!user) return;
+    const currentPassword = currentPasswordInput.value;
+    const newPassword = newPasswordInput.value;
+    if(!currentPassword){
+      changePasswordError.textContent = 'Введи текущий пароль.';
+      return;
+    }
+    if(!newPassword || newPassword.length < 6){
+      changePasswordError.textContent = 'Новый пароль должен быть не короче 6 символов.';
+      return;
+    }
+    changePasswordBtn.disabled = true;
+    const originalText = changePasswordBtn.textContent;
+    changePasswordBtn.innerHTML = '<span class="btn-spinner"></span>Меняем…';
+    try{
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      changePasswordError.style.color = '#8FD19E';
+      changePasswordError.textContent = 'Пароль успешно изменён.';
+      currentPasswordInput.value = '';
+      newPasswordInput.value = '';
+    }catch(err){
+      changePasswordError.style.color = '';
+      changePasswordError.textContent = friendlyError(err);
+    }finally{
+      changePasswordBtn.disabled = false;
+      changePasswordBtn.textContent = originalText;
+    }
+  });
+
+  let deleteConfirmArmed = false;
+  let deleteConfirmTimer = null;
+  function resetDeleteButton(){
+    deleteConfirmArmed = false;
+    clearTimeout(deleteConfirmTimer);
+    deleteAccountBtn.textContent = 'Удалить аккаунт';
+  }
+
+  deleteAccountBtn.addEventListener('click', async () => {
+    deleteAccountError.textContent = '';
+    const user = auth.currentUser;
+    if(!user) return;
+
+    if(!deleteConfirmArmed){
+      deleteConfirmArmed = true;
+      deleteAccountBtn.textContent = 'Точно удалить? Нажми ещё раз';
+      deleteConfirmTimer = setTimeout(resetDeleteButton, 4000);
+      return;
+    }
+    resetDeleteButton();
+
+    const method = getSignInMethod(user);
+    if(method === 'password' && !currentPasswordInput.value){
+      deleteAccountError.textContent = 'Введи текущий пароль в поле выше, чтобы подтвердить удаление.';
+      return;
+    }
+
+    deleteAccountBtn.disabled = true;
+    try{
+      if(method === 'google'){
+        await reauthenticateWithPopup(user, googleProvider);
+      }else{
+        const credential = EmailAuthProvider.credential(user.email, currentPasswordInput.value);
+        await reauthenticateWithCredential(user, credential);
+      }
+      try{ await deleteDoc(doc(db, 'wandexChats', user.uid)); }catch(e){ /* не критично, если не найдётся */ }
+      await deleteUser(user);
+      closeAccountModalFn();
+    }catch(err){
+      deleteAccountError.textContent = friendlyError(err);
+    }finally{
+      deleteAccountBtn.disabled = false;
+    }
+  });
+
 
   let isSignUpMode = false;
 
@@ -1999,6 +2426,8 @@
     errorEl.style.color = '';
     errorEl.textContent = '';
     submitBtn.disabled = true;
+    const originalSubmitText = submitBtn.textContent;
+    submitBtn.innerHTML = '<span class="btn-spinner"></span>Отправляем код…';
     const email = emailInput.value.trim();
     const password = passInput.value;
     try{
@@ -2007,6 +2436,7 @@
       errorEl.textContent = err.message || 'Не удалось отправить код. Попробуй ещё раз.';
     }finally{
       submitBtn.disabled = false;
+      submitBtn.textContent = originalSubmitText;
     }
   });
 
@@ -2094,10 +2524,16 @@
 
   resendCodeBtn.addEventListener('click', async () => {
     codeError.textContent = '';
+    resendCodeBtn.disabled = true;
+    const originalResendText = resendCodeBtn.textContent;
+    resendCodeBtn.innerHTML = '<span class="btn-spinner" style="border-color:rgba(154,160,181,0.35);border-top-color:var(--text-dim);"></span>Отправляем…';
     try{
       await sendLoginCode(pendingEmail, pendingPassword, pendingIsSignUp);
+      // при успехе sendLoginCode сам запускает startResendCooldown(), которая переустановит текст и disabled
     }catch(err){
       codeError.textContent = err.message || 'Не удалось отправить код.';
+      resendCodeBtn.disabled = false;
+      resendCodeBtn.textContent = originalResendText;
     }
   });
 
@@ -2172,6 +2608,8 @@
     if(user){
       authOverlay.classList.add('hide');
       userEmailLabel.textContent = user.email || user.displayName || 'Аккаунт';
+      const method = getSignInMethod(user);
+      userMethodBadge.textContent = method === 'google' ? '● через Google' : '● через email';
 
       let remoteData = null;
       try{
@@ -2195,4 +2633,4 @@
 </script>
 
 </body>
-</html>
+      </html>
