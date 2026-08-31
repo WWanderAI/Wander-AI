@@ -996,6 +996,7 @@
       <button class="mode-btn active" data-mode="scout">Скаут · быстро</button>
       <button class="mode-btn" data-mode="pathfinder">Следопыт · сбаланс.</button>
       <button class="mode-btn" data-mode="navigator">Штурман · глубоко</button>
+      <button class="mode-btn" data-mode="video">Видео · клип</button>
     </div>
   </div>
 </header>
@@ -1132,8 +1133,16 @@
       label: 'Штурман',
       system: 'Ты — Wandex AI в режиме "Штурман". Разбирай вопрос глубоко: структурируй ответ, рассматривай детали, приводи примеры и оговорки, где это уместно.' + NO_THINKING,
       max_tokens: 1600
+    },
+    video: {
+      label: 'Видео',
+      isVideoMode: true
     }
   };
+
+  // ключ Pollinations для генерации видео — publishable-ключ (pk_...),
+  // безопасно светить в клиентском коде, в отличие от секретных ключей выше.
+  const POLLINATIONS_KEY = 'sk_o4QfEDPGGCLrborr6Jwd7l9mnd2s03uT';
 
   // ключ OpenRouter — вшит напрямую по просьбе пользователя
   const OPENROUTER_KEY = 'BUr9CyXcEBs3SHd482ntLNlwM56s0qXd';
@@ -1442,6 +1451,7 @@
     if(!c) return;
     activeChatId = id;
     currentMode = c.mode || 'scout';
+    applyModeUI();
     history = c.history || [];
     pendingImages = [];
     renderAttachPreview();
@@ -1691,6 +1701,7 @@
 
     const active = findChat(activeChatId);
     currentMode = active.mode || 'scout';
+    applyModeUI();
     history = active.history || [];
     modeRow.querySelectorAll('.mode-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.mode === currentMode);
@@ -1754,6 +1765,12 @@
     if(!modeSelector.contains(e.target)) closeModeDropdown();
   });
 
+  function applyModeUI(){
+    const isVideo = currentMode === 'video';
+    attachBtn.style.display = isVideo ? 'none' : '';
+    input.placeholder = isVideo ? 'Опиши сцену для видео...' : 'Спроси что-нибудь...';
+  }
+
   modeRow.addEventListener('click', (e) => {
     const btn = e.target.closest('.mode-btn');
     if(!btn) return;
@@ -1762,6 +1779,7 @@
     currentMode = btn.dataset.mode;
     modeTriggerLabel.textContent = btn.textContent;
     closeModeDropdown();
+    applyModeUI();
     saveState();
   });
 
@@ -2082,6 +2100,27 @@
     const images = pendingImages.slice();
     if(!text && images.length === 0) return;
 
+    const mode = MODES[currentMode];
+
+    if(mode.isVideoMode){
+      if(!text){ return; } // для видео нужен текстовый промпт
+      const userDiv = addMessage('user', text, {});
+      history.push({ role: 'user', content: [{ type: 'text', text: text }] });
+      const userIndex = history.length - 1;
+      userDiv.dataset.historyIndex = userIndex;
+      addUserActions(userDiv, text, userIndex);
+      saveState();
+
+      input.value = '';
+      input.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      const pendingEl = addMessage('ai', 'Генерируем видео… это может занять пару минут', { pending: true });
+      await runVideoGeneration(pendingEl, text);
+      sendBtn.disabled = false;
+      return;
+    }
+
     const userDiv = addMessage('user', text, { images: images.map(i => i.previewUrl) });
 
     const contentBlocks = images.map(img => ({
@@ -2106,6 +2145,79 @@
     const pendingEl = addMessage('ai', 'Wandex прокладывает маршрут…', { pending: true });
     await runCompletion(pendingEl);
     sendBtn.disabled = false;
+  }
+
+  async function runVideoGeneration(pendingEl, prompt){
+    setGenerating(true);
+    manualStop = false;
+    const controller = new AbortController();
+    activeStreamController = controller;
+    const VIDEO_TIMEOUT_MS = 5 * 60 * 1000; // видео генерируется дольше текста — даём 5 минут
+    const timeoutId = setTimeout(() => controller.abort(), VIDEO_TIMEOUT_MS);
+
+    try{
+      const url = 'https://gen.pollinations.ai/image/' + encodeURIComponent(prompt)
+        + '?model=veo&width=1280&height=720&duration=6&key=' + encodeURIComponent(POLLINATIONS_KEY);
+
+      let response;
+      try{
+        response = await fetch(url, { signal: controller.signal });
+      }catch(fetchErr){
+        if(fetchErr.name === 'AbortError' && manualStop){
+          pendingEl.remove();
+          return;
+        }
+        if(fetchErr.name === 'AbortError'){
+          throw new Error('Генерация видео заняла слишком много времени (>5 мин). Попробуй ещё раз или упрости запрос.');
+        }
+        throw new Error('Нет соединения с сервером Pollinations. Проверь интернет и попробуй ещё раз.');
+      }
+
+      if(response.status === 401 || response.status === 403){
+        throw new Error('Ключ Pollinations не принят. Проверь, что ключ актуален и вставлен полностью.');
+      }
+      if(response.status === 429){
+        throw new Error('Превышен лимит запросов на генерацию видео (бесплатный ключ ограничен). Подожди немного и попробуй снова.');
+      }
+      if(!response.ok){
+        let detail = '';
+        try{ detail = await response.text(); }catch(e){ /* ignore */ }
+        throw new Error('Сеть ответила с ошибкой ' + response.status + (detail ? ': ' + detail.slice(0, 150) : ''));
+      }
+
+      const blob = await response.blob();
+      if(!blob.type.startsWith('video/')){
+        throw new Error('Сервер вернул не видео — возможно, запрос отклонён фильтром безопасности или ключ неверный.');
+      }
+      const videoUrl = URL.createObjectURL(blob);
+
+      pendingEl.classList.remove('pending');
+      const textEl = pendingEl.querySelector('.msg-text');
+      textEl.innerHTML = '';
+      const videoTag = document.createElement('video');
+      videoTag.src = videoUrl;
+      videoTag.controls = true;
+      videoTag.style.width = '100%';
+      videoTag.style.borderRadius = '10px';
+      textEl.appendChild(videoTag);
+      const hint = document.createElement('div');
+      hint.style.cssText = 'font-size:11px;color:var(--text-dim);margin-top:6px;';
+      hint.textContent = 'Видео доступно только в этой сессии — скачай, если хочешь сохранить (не переживает перезагрузку страницы).';
+      textEl.appendChild(hint);
+
+      history.push({ role: 'assistant', content: '[видео сгенерировано: "' + prompt + '" — не сохраняется между сессиями]' });
+      saveState();
+      chat.scrollTop = chat.scrollHeight;
+
+    }catch(err){
+      pendingEl.remove();
+      addMessage('error', 'Не удалось получить видео: ' + err.message, { error: true });
+    }finally{
+      clearTimeout(timeoutId);
+      activeStreamController = null;
+      manualStop = false;
+      setGenerating(false);
+    }
   }
 
   // Запускается из Firebase-модуля после успешного входа.
@@ -2633,4 +2745,4 @@
 </script>
 
 </body>
-      </html>
+  </html>
