@@ -6,25 +6,29 @@
 <title>Wandex AI</title>
 <style>
   :root{
-    --bg: #171B26;
-    --bg-panel: #1F2433;
-    --bg-panel-2: #262C40;
-    --line: #333A52;
-    --text: #EDEAE0;
-    --text-dim: #9CA0B4;
-    --amber: #E3A542;
-    --amber-dim: #7A5D28;
-    --teal: #3FA796;
-    --radius: 10px;
+    --bg: #17140F;
+    --bg-panel: #211C14;
+    --bg-panel-2: #2B2519;
+    --line: #4A3F2C;
+    --text: #EDE3CC;
+    --text-dim: #9C8F72;
+    --amber: #B4863E;
+    --amber-dim: #5C4726;
+    --teal: #4F7A68;
+    --rust: #A8523A;
+    --violet: #6B6693;
+    --radius: 3px;
     --font-display: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Avenir Next', 'Century Gothic', 'Segoe UI', Roboto, sans-serif;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
     margin:0;
     background:
-      radial-gradient(circle at 15% 8%, rgba(227,165,66,0.07), transparent 40%),
+      radial-gradient(circle at 15% 8%, rgba(180,134,62,0.06), transparent 40%),
+      radial-gradient(circle at 88% 78%, rgba(79,122,104,0.05), transparent 45%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420'%3E%3Cg fill='none' stroke='%23B4863E' stroke-opacity='0.05' stroke-width='1'%3E%3Cpath d='M-20 60 Q 90 10, 200 60 T 440 60'/%3E%3Cpath d='M-20 130 Q 100 190, 210 130 T 440 130'/%3E%3Cpath d='M-20 210 Q 80 160, 210 210 T 440 210'/%3E%3Cpath d='M-20 290 Q 110 340, 220 290 T 440 290'/%3E%3Cpath d='M-20 360 Q 90 320, 210 360 T 440 360'/%3E%3C/g%3E%3C/svg%3E"),
       var(--bg);
     color:var(--text);
     font-family:var(--font-body);
@@ -117,14 +121,15 @@
     line-height:1.6;
   }
   .chat-item{
-    padding:9px 8px;
-    border-radius:9px;
-    margin-bottom:6px;
+    padding:9px 8px 9px 10px;
+    border-radius:0;
+    margin-bottom:2px;
     background:var(--bg-panel-2);
-    border:1px solid transparent;
+    border:none;
+    border-left:2px solid transparent;
     cursor:pointer;
   }
-  .chat-item.active{border-color:var(--amber);}
+  .chat-item.active{border-left-color:var(--amber);}
   .chat-item-title{
     font-size:12.5px;
     line-height:1.35;
@@ -174,9 +179,9 @@
   #newChatBtn{
     width:100%;
     background:var(--amber);
-    color:#241B0A;
+    color:#1E170C;
     border:none;
-    border-radius:10px;
+    border-radius:2px;
     padding:10px;
     font-size:13px;
     font-weight:600;
@@ -199,35 +204,17 @@
     margin-top:1px;
   }
 
-  .mode-row{
-    display:flex;
-    gap:6px;
-    margin-top:14px;
-    overflow-x:auto;
-    padding-bottom:2px;
-  }
   .mode-btn{
-    flex:1;
-    min-width:0;
-    background:var(--bg-panel);
-    border:1px solid var(--line);
-    color:var(--text-dim);
-    border-radius:999px;
-    padding:7px 10px;
-    font-size:12px;
     font-family:var(--font-body);
     cursor:pointer;
-    white-space:nowrap;
-    text-align:center;
-    transition:border-color .15s, color .15s, background .15s;
+    text-align:left;
+    color:var(--text-dim);
   }
   .mode-btn.active{
-    border-color:var(--amber);
     color:var(--amber);
-    background:rgba(227,165,66,0.08);
   }
 
-  /* --- Кнопка выбора режима + выпадающее меню --- */
+  /* --- Кнопка выбора режима + выпадающее меню (стиль маршрутных точек) --- */
   .mode-selector{
     position:relative;
     margin-top:14px;
@@ -235,32 +222,34 @@
   .mode-trigger{
     display:flex;
     align-items:center;
-    gap:8px;
+    gap:10px;
     width:100%;
-    background:var(--bg-panel);
-    border:1px solid var(--line);
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
     color:var(--text);
-    border-radius:999px;
-    padding:8px 14px;
-    font-size:12.5px;
+    border-radius:0;
+    padding:9px 2px;
+    font-size:13px;
     font-family:var(--font-body);
+    letter-spacing:0.2px;
     cursor:pointer;
-    transition:border-color .15s, background .15s;
+    transition:border-color .15s;
   }
   .mode-trigger:hover{border-color:var(--amber-dim);}
   .mode-selector.open .mode-trigger{
     border-color:var(--amber);
-    background:rgba(227,165,66,0.06);
   }
   .mode-trigger-dot{
-    width:7px;height:7px;
+    width:9px;height:9px;
     border-radius:50%;
-    background:var(--amber);
+    border:2px solid var(--amber);
+    background:transparent;
     flex-shrink:0;
   }
   #modeTriggerLabel{ flex:1; text-align:left; }
   .mode-trigger-chevron{
-    width:15px;height:15px;
+    width:14px;height:14px;
     flex-shrink:0;
     color:var(--text-dim);
     transition:transform .25s cubic-bezier(.4,0,.2,1);
@@ -271,46 +260,52 @@
   }
   .mode-dropdown{
     position:absolute;
-    top:calc(100% + 6px);
+    top:calc(100% + 4px);
     left:0;
     right:0;
     z-index:20;
     display:flex;
     flex-direction:column;
-    gap:5px;
     background:var(--bg-panel);
     border:1px solid var(--line);
-    border-radius:14px;
-    padding:6px;
-    box-shadow:0 12px 28px rgba(0,0,0,0.35);
+    border-radius:0;
+    padding:4px 0;
 
     max-height:0;
     opacity:0;
-    transform:translateY(-6px) scale(0.98);
+    transform:translateY(-4px);
     pointer-events:none;
     overflow:hidden;
     transition:max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s ease, transform .22s cubic-bezier(.4,0,.2,1);
   }
   .mode-selector.open .mode-dropdown{
-    max-height:220px;
+    max-height:260px;
     opacity:1;
-    transform:translateY(0) scale(1);
+    transform:translateY(0);
     pointer-events:auto;
   }
   .mode-dropdown .mode-btn{
     flex:none;
     width:100%;
     text-align:left;
-    border-radius:9px;
-    border-color:transparent;
+    border-radius:0;
+    border:none;
+    border-left:2px solid transparent;
     background:transparent;
+    padding:9px 14px;
+    position:relative;
+  }
+  .mode-dropdown .mode-btn + .mode-btn{
+    border-top:1px solid var(--line);
   }
   .mode-dropdown .mode-btn:hover{
-    background:rgba(227,165,66,0.06);
+    background:rgba(180,134,62,0.06);
+    border-left-color:var(--amber-dim);
   }
   .mode-dropdown .mode-btn.active{
-    background:rgba(227,165,66,0.1);
-    border-color:var(--amber-dim);
+    background:rgba(180,134,62,0.09);
+    border-left-color:var(--amber);
+    color:var(--amber);
   }
 
   /* trail dots divider */
@@ -357,33 +352,37 @@
     align-self:flex-end;
     background:var(--amber-dim);
     color:#FBF3E4;
-    border-bottom-right-radius:3px;
+    border-radius:10px 2px 10px 10px;
   }
   .msg.ai{
     align-self:flex-start;
-    background:var(--bg-panel);
-    border:1px solid var(--line);
-    border-bottom-left-radius:3px;
+    max-width:92%;
+    background:transparent;
+    border:none;
+    border-left:2px solid var(--amber-dim);
+    padding:2px 0 2px 14px;
+    border-radius:0;
   }
   .msg.ai.pending{color:var(--text-dim);font-style:italic;}
   .msg.error{
     align-self:center;
-    background:rgba(200,80,70,0.12);
-    border:1px solid rgba(200,80,70,0.4);
-    color:#E6A69E;
+    background:rgba(168,82,58,0.12);
+    border:1px solid rgba(168,82,58,0.4);
+    color:#DBA394;
     font-size:13px;
+    border-radius:2px;
   }
   .msg code{
     background:rgba(255,255,255,0.08);
     padding:1px 5px;
-    border-radius:4px;
+    border-radius:2px;
     font-family:ui-monospace,'SF Mono',Consolas,monospace;
     font-size:13px;
   }
   .msg pre{
     background:rgba(0,0,0,0.28);
     border:1px solid var(--line);
-    border-radius:8px;
+    border-radius:2px;
     padding:10px 12px;
     overflow-x:auto;
     margin:6px 0;
@@ -443,7 +442,7 @@
   }
   .msg-edit-actions button.primary{
     background:var(--amber);
-    color:#241B0A;
+    color:#1E170C;
     border-color:var(--amber);
     font-weight:600;
   }
@@ -461,7 +460,7 @@
     gap:8px;
     background:var(--bg-panel);
     border:1px solid var(--line);
-    border-radius:14px;
+    border-radius:2px;
     padding:6px 6px 6px 14px;
   }
   .input-row:focus-within{
@@ -491,7 +490,7 @@
   }
   #send{
     background:var(--amber);
-    color:#241B0A;
+    color:#1E170C;
   }
   #attach, #micBtn{
     background:transparent;
@@ -500,20 +499,20 @@
   }
   #attach:hover, #micBtn:hover{color:var(--amber);border-color:var(--amber);}
   #micBtn.recording{
-    color:#E6675C;
-    border-color:#E6675C;
-    background:rgba(230,103,92,0.12);
+    color:#A8523A;
+    border-color:#A8523A;
+    background:rgba(168,82,58,0.14);
     animation:mic-pulse 1.1s ease-in-out infinite;
   }
   @keyframes mic-pulse{
-    0%, 100%{ box-shadow:0 0 0 0 rgba(230,103,92,0.35); }
-    50%{ box-shadow:0 0 0 6px rgba(230,103,92,0); }
+    0%, 100%{ box-shadow:0 0 0 0 rgba(168,82,58,0.35); }
+    50%{ box-shadow:0 0 0 6px rgba(168,82,58,0); }
   }
   #send:active, #attach:active, #micBtn:active{transform:scale(0.94);}
   #send:disabled{opacity:0.35;cursor:default;}
   #send svg, #attach svg, #micBtn svg{width:16px;height:16px;}
   #send.stop-mode{
-    background:#E6675C;
+    background:#A8523A;
     color:#2A1210;
   }
 
@@ -607,7 +606,7 @@
     width:100%;
     max-width:280px;
     background:var(--amber);
-    color:#241B0A;
+    color:#1E170C;
     border:none;
     border-radius:10px;
     padding:11px;
@@ -617,7 +616,7 @@
   }
   #keyGate .gate-err{
     font-size:12px;
-    color:#E6A69E;
+    color:#D8A192;
     margin-top:8px;
     min-height:14px;
   }
@@ -628,7 +627,7 @@
   .auth-overlay{
     position:fixed;inset:0;
     background:
-      radial-gradient(circle at 15% 8%, rgba(227,165,66,0.08), transparent 40%),
+      radial-gradient(circle at 15% 8%, rgba(180,134,62,0.08), transparent 40%),
       var(--bg);
     z-index:100;
     display:flex;
@@ -660,14 +659,16 @@
     max-width:340px;
     background:var(--bg-panel);
     border:1px solid var(--line);
-    border-radius:14px;
-    padding:26px 22px;
+    border-top:2px solid var(--amber);
+    border-radius:2px;
+    padding:30px 24px 24px;
   }
   .auth-title{
     font-family:var(--font-display);
-    font-size:22px;
+    font-size:23px;
     font-weight:600;
     text-align:center;
+    letter-spacing:0.3px;
   }
   .auth-sub{
     color:var(--text-dim);
@@ -678,16 +679,18 @@
   }
   .auth-google-btn{
     width:100%;
-    background:#fff;
-    color:#1F1F1F;
-    border:none;
-    border-radius:10px;
+    background:transparent;
+    color:var(--text);
+    border:1px solid var(--line);
+    border-radius:2px;
     padding:11px;
     font-size:13.5px;
     font-weight:600;
     display:flex;align-items:center;justify-content:center;gap:10px;
     cursor:pointer;
+    transition:border-color .15s;
   }
+  .auth-google-btn:hover{border-color:var(--amber-dim);}
   .auth-divider{
     display:flex;align-items:center;gap:10px;
     color:var(--text-dim);
@@ -702,7 +705,7 @@
     background:var(--bg);
     border:1px solid var(--line);
     color:var(--text);
-    border-radius:9px;
+    border-radius:2px;
     padding:11px 12px;
     font-size:13.5px;
     font-family:inherit;
@@ -711,7 +714,7 @@
   }
   .auth-input:focus{border-color:var(--amber-dim);}
   .auth-error{
-    color:#E6A69E;
+    color:#D8A192;
     font-size:12px;
     min-height:14px;
     margin-bottom:6px;
@@ -720,9 +723,9 @@
   .auth-submit-btn{
     width:100%;
     background:var(--amber);
-    color:#241B0A;
+    color:#1E170C;
     border:none;
-    border-radius:10px;
+    border-radius:2px;
     padding:11px;
     font-size:13.5px;
     font-weight:600;
@@ -803,7 +806,8 @@
     overflow-y:auto;
     background:var(--bg-panel);
     border:1px solid var(--line);
-    border-radius:14px;
+    border-top:2px solid var(--amber);
+    border-radius:2px;
     padding:20px;
   }
   .account-modal-header{
@@ -856,15 +860,15 @@
   .account-danger-btn{
     width:100%;
     background:transparent;
-    border:1px solid #E6675C;
-    color:#E6675C;
-    border-radius:9px;
+    border:1px solid var(--rust);
+    color:#D8A192;
+    border-radius:2px;
     padding:10px;
     font-size:12.5px;
     font-weight:600;
     cursor:pointer;
   }
-  .account-danger-btn:hover{background:rgba(230,103,92,0.1);}
+  .account-danger-btn:hover{background:rgba(168,82,58,0.1);}
   .account-modal-google-note{
     font-size:11.5px;
     color:var(--text-dim);
@@ -876,7 +880,7 @@
     background:transparent;
     border:1px solid var(--line);
     color:var(--text-dim);
-    border-radius:9px;
+    border-radius:2px;
     padding:9px;
     font-size:12.5px;
     cursor:pointer;
@@ -908,7 +912,7 @@
     width:13px;height:13px;
     border-radius:50%;
     border:2px solid rgba(36,27,10,0.35);
-    border-top-color:#241B0A;
+    border-top-color:#1E170C;
     animation:auth-spin 0.7s linear infinite;
     vertical-align:-2px;
     margin-right:6px;
@@ -987,20 +991,20 @@
   <div class="mode-selector" id="modeSelector">
     <button class="mode-trigger" id="modeTrigger" type="button" aria-haspopup="true" aria-expanded="false">
       <span class="mode-trigger-dot"></span>
-      <span id="modeTriggerLabel">Скаут · быстро</span>
+      <span id="modeTriggerLabel">Скаут: быстро</span>
       <svg class="mode-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 12 15 18 9"></polyline>
       </svg>
     </button>
     <div class="mode-dropdown" id="modeRow">
-      <button class="mode-btn active" data-mode="scout">Скаут · быстро</button>
-      <button class="mode-btn" data-mode="pathfinder">Следопыт · сбаланс.</button>
-      <button class="mode-btn" data-mode="navigator">Штурман · глубоко</button>
+      <button class="mode-btn active" data-mode="scout">Скаут: быстро</button>
+      <button class="mode-btn" data-mode="pathfinder">Следопыт: сбалансированно</button>
+      <button class="mode-btn" data-mode="navigator">Штурман: глубоко</button>
       <!-- Режим "Видео" временно скрыт — нужен платный баланс Pollen для генерации.
            Чтобы вернуть: раскомментируй строку ниже.
-      <button class="mode-btn" data-mode="video">Видео · клип</button>
+      <button class="mode-btn" data-mode="video">Видео: клип</button>
       -->
-      <button class="mode-btn" data-mode="photo">Фото · картинка</button>
+      <button class="mode-btn" data-mode="photo">Художник: картинка</button>
     </div>
   </div>
 </header>
@@ -2175,6 +2179,33 @@
     sendBtn.disabled = false;
   }
 
+  // Flux (Pollinations) плохо понимает запросы не на английском — переводим
+  // промпт через Mistral перед генерацией. Если перевод не удался, используем
+  // исходный текст как есть (лучше так, чем вообще не сгенерировать картинку).
+  async function translatePromptToEnglish(text){
+    try{
+      const payload = {
+        model: 'mistral-small-latest',
+        messages: [
+          { role: 'system', content: 'Translate the user\'s message into a short, vivid English prompt suitable for an AI image generator. Output ONLY the translated prompt, nothing else — no quotes, no explanations.' },
+          { role: 'user', content: text }
+        ],
+        max_tokens: 120
+      };
+      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENROUTER_KEY },
+        body: JSON.stringify(payload)
+      });
+      if(!response.ok) return text;
+      const data = await response.json();
+      const translated = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      return (translated && translated.trim()) ? translated.trim() : text;
+    }catch(e){
+      return text; // перевод не критичен — просто продолжаем с оригиналом
+    }
+  }
+
   async function runImageGeneration(pendingEl, prompt){
     setGenerating(true);
     manualStop = false;
@@ -2184,9 +2215,14 @@
     const timeoutId = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
 
     try{
+      const textEl0 = pendingEl.querySelector('.msg-text');
+      if(textEl0) textEl0.textContent = 'Переводим запрос…';
+      const englishPrompt = await translatePromptToEnglish(prompt);
+      if(textEl0) textEl0.textContent = 'Рисуем картинку…';
+
       // Flux-картинки у Pollinations бесплатны и без ограничений даже без ключа.
       const seed = Math.floor(Math.random() * 1000000);
-      const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt)
+      const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(englishPrompt)
         + '?width=1024&height=1024&model=flux&nologo=true&seed=' + seed;
 
       let response;
@@ -2847,4 +2883,4 @@
 </script>
 
 </body>
-</html>
+  </html>
