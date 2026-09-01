@@ -1000,6 +1000,7 @@
            Чтобы вернуть: раскомментируй строку ниже.
       <button class="mode-btn" data-mode="video">Видео · клип</button>
       -->
+      <button class="mode-btn" data-mode="photo">Фото · картинка</button>
     </div>
   </div>
 </header>
@@ -1140,6 +1141,10 @@
     video: {
       label: 'Видео',
       isVideoMode: true
+    },
+    photo: {
+      label: 'Фото',
+      isImageMode: true
     }
   };
 
@@ -1770,8 +1775,9 @@
 
   function applyModeUI(){
     const isVideo = currentMode === 'video';
-    attachBtn.style.display = isVideo ? 'none' : '';
-    input.placeholder = isVideo ? 'Опиши сцену для видео...' : 'Спроси что-нибудь...';
+    const isPhoto = currentMode === 'photo';
+    attachBtn.style.display = (isVideo || isPhoto) ? 'none' : '';
+    input.placeholder = isVideo ? 'Опиши сцену для видео...' : isPhoto ? 'Опиши картинку...' : 'Спроси что-нибудь...';
   }
 
   modeRow.addEventListener('click', (e) => {
@@ -2124,6 +2130,25 @@
       return;
     }
 
+    if(mode.isImageMode){
+      if(!text){ return; } // для картинки нужен текстовый промпт
+      const userDiv = addMessage('user', text, {});
+      history.push({ role: 'user', content: [{ type: 'text', text: text }] });
+      const userIndex = history.length - 1;
+      userDiv.dataset.historyIndex = userIndex;
+      addUserActions(userDiv, text, userIndex);
+      saveState();
+
+      input.value = '';
+      input.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      const pendingEl = addMessage('ai', 'Рисуем картинку…', { pending: true });
+      await runImageGeneration(pendingEl, text);
+      sendBtn.disabled = false;
+      return;
+    }
+
     const userDiv = addMessage('user', text, { images: images.map(i => i.previewUrl) });
 
     const contentBlocks = images.map(img => ({
@@ -2148,6 +2173,80 @@
     const pendingEl = addMessage('ai', 'Wandex прокладывает маршрут…', { pending: true });
     await runCompletion(pendingEl);
     sendBtn.disabled = false;
+  }
+
+  async function runImageGeneration(pendingEl, prompt){
+    setGenerating(true);
+    manualStop = false;
+    const controller = new AbortController();
+    activeStreamController = controller;
+    const IMAGE_TIMEOUT_MS = 60 * 1000; // картинка генерируется куда быстрее видео
+    const timeoutId = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
+
+    try{
+      // Flux-картинки у Pollinations бесплатны и без ограничений даже без ключа.
+      const seed = Math.floor(Math.random() * 1000000);
+      const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt)
+        + '?width=1024&height=1024&model=flux&nologo=true&seed=' + seed;
+
+      let response;
+      try{
+        response = await fetch(url, { signal: controller.signal });
+      }catch(fetchErr){
+        if(fetchErr.name === 'AbortError' && manualStop){
+          pendingEl.remove();
+          return;
+        }
+        if(fetchErr.name === 'AbortError'){
+          throw new Error('Генерация картинки заняла слишком много времени. Попробуй ещё раз.');
+        }
+        throw new Error('Нет соединения с сервером Pollinations. Проверь интернет и попробуй ещё раз.');
+      }
+
+      if(response.status === 429){
+        throw new Error('Слишком много запросов подряд. Подожди немного и попробуй снова.');
+      }
+      if(!response.ok){
+        let detail = '';
+        try{ detail = await response.text(); }catch(e){ /* ignore */ }
+        throw new Error('Сеть ответила с ошибкой ' + response.status + (detail ? ': ' + detail.slice(0, 150) : ''));
+      }
+
+      const blob = await response.blob();
+      if(!blob.type.startsWith('image/')){
+        throw new Error('Сервер вернул не картинку — возможно, запрос отклонён фильтром безопасности.');
+      }
+      const imageUrl = URL.createObjectURL(blob);
+
+      pendingEl.classList.remove('pending');
+      const textEl = pendingEl.querySelector('.msg-text');
+      textEl.innerHTML = '';
+      const imgTag = document.createElement('img');
+      imgTag.src = imageUrl;
+      imgTag.style.width = '100%';
+      imgTag.style.borderRadius = '10px';
+      imgTag.style.display = 'block';
+      textEl.appendChild(imgTag);
+      const dl = document.createElement('a');
+      dl.href = imageUrl;
+      dl.download = 'wandex-image.png';
+      dl.textContent = 'Скачать';
+      dl.style.cssText = 'display:inline-block;font-size:11px;color:var(--amber);margin-top:6px;text-decoration:none;';
+      textEl.appendChild(dl);
+
+      history.push({ role: 'assistant', content: '[картинка сгенерирована: "' + prompt + '" — не сохраняется между сессиями]' });
+      saveState();
+      chat.scrollTop = chat.scrollHeight;
+
+    }catch(err){
+      pendingEl.remove();
+      addMessage('error', 'Не удалось получить картинку: ' + err.message, { error: true });
+    }finally{
+      clearTimeout(timeoutId);
+      activeStreamController = null;
+      manualStop = false;
+      setGenerating(false);
+    }
   }
 
   async function runVideoGeneration(pendingEl, prompt){
@@ -2748,4 +2847,4 @@
 </script>
 
 </body>
-  </html>
+</html>
