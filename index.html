@@ -46,7 +46,7 @@
     gap:10px;
   }
   .brand > div:nth-child(2){flex:1;}
-  #openChats{
+  #openChats, #openGallery{
     width:30px;height:30px;flex-shrink:0;
     border-radius:50%;
     border:1px solid var(--line);
@@ -55,8 +55,8 @@
     display:flex;align-items:center;justify-content:center;
     cursor:pointer;
   }
-  #openChats:hover{color:var(--amber);border-color:var(--amber);}
-  #openChats svg{width:15px;height:15px;}
+  #openChats:hover, #openGallery:hover{color:var(--amber);border-color:var(--amber);}
+  #openChats svg, #openGallery svg{width:15px;height:15px;}
 
   /* панель чатов */
   .drawer-overlay{
@@ -104,6 +104,38 @@
   }
   .drawer-header button:hover{color:var(--amber);}
   .drawer-header button svg{width:15px;height:15px;}
+
+  .drawer-search{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0 8px 8px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    color:var(--text-dim);
+    flex-shrink:0;
+  }
+  .drawer-search:focus-within{border-color:var(--amber-dim);}
+  .drawer-search svg{width:14px;height:14px;flex-shrink:0;}
+  .drawer-search input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:12.5px;
+  }
+  .drawer-search input::placeholder{color:var(--text-dim);}
+  .chat-group-label{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--text-dim);
+    padding:10px 10px 6px;
+  }
+  .chat-group-label:first-child{padding-top:2px;}
 
   .drawer-list{
     flex:1;
@@ -708,6 +740,22 @@
     outline:none;
   }
   .auth-input:focus{border-color:var(--amber-dim);}
+  .pw-field{position:relative;}
+  .pw-field .auth-input{padding-right:38px;}
+  .pw-toggle{
+    position:absolute;
+    top:0;right:0;
+    height:100%;
+    width:38px;
+    display:flex;align-items:center;justify-content:center;
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    cursor:pointer;
+  }
+  .pw-toggle svg{width:16px;height:16px;}
+  .pw-toggle:hover{color:var(--amber);}
+  .pw-toggle.showing{color:var(--amber);}
   .auth-error{
     color:#D8A192;
     font-size:12px;
@@ -747,6 +795,23 @@
     padding:10px 12px;
     border-top:1px solid var(--line);
     flex-shrink:0;
+  }
+  .user-avatar{
+    width:30px;height:30px;
+    border-radius:50%;
+    flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--amber-dim);
+    color:#F2E6C9;
+    font-size:12px;
+    font-weight:700;
+    font-family:var(--font-display);
+    overflow:hidden;
+    border:1px solid var(--amber);
+  }
+  .user-avatar img{
+    width:100%;height:100%;
+    object-fit:cover;
   }
   .drawer-user-info{
     display:flex;
@@ -852,6 +917,48 @@
     margin:0 0 10px;
     line-height:1.5;
   }
+  .gallery-modal{max-width:420px;}
+  .gallery-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .gallery-empty{
+    grid-column:1 / -1;
+    text-align:center;
+    color:var(--text-dim);
+    font-size:12px;
+    padding:30px 10px;
+  }
+  .gallery-item{
+    position:relative;
+    border:1px solid var(--line);
+    overflow:hidden;
+  }
+  .gallery-item img{
+    width:100%;
+    aspect-ratio:1/1;
+    object-fit:cover;
+    display:block;
+  }
+  .gallery-item a.gallery-dl{
+    position:absolute;
+    right:5px;bottom:5px;
+    background:rgba(23,20,15,0.75);
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    font-size:10px;
+    padding:3px 7px;
+    text-decoration:none;
+  }
+  .gallery-item-prompt{
+    font-size:10px;
+    color:var(--text-dim);
+    padding:5px 6px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
   .account-danger-btn{
     width:100%;
     background:transparent;
@@ -939,7 +1046,12 @@
 
     <form id="emailAuthForm" autocomplete="on">
       <input id="authEmail" class="auth-input" type="email" placeholder="Email" autocomplete="email" required>
-      <input id="authPassword" class="auth-input" type="password" placeholder="Пароль" autocomplete="current-password" required minlength="6">
+      <div class="pw-field">
+        <input id="authPassword" class="auth-input" type="password" placeholder="Пароль" autocomplete="current-password" required minlength="6">
+        <button type="button" class="pw-toggle" data-target="authPassword" aria-label="Показать пароль">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
+      </div>
       <div style="text-align:right;margin:-4px 0 12px;">
         <button id="forgotPasswordBtn" type="button" class="auth-forgot-btn">Забыли пароль?</button>
       </div>
@@ -974,6 +1086,13 @@
     <div>
       <div class="brand-name">Wandex AI</div>
     </div>
+    <button id="openGallery" aria-label="Галерея картинок" title="Галерея картинок">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+        <circle cx="9" cy="9" r="1.8"></circle>
+        <path d="M21 15l-5-5-9 9"></path>
+      </svg>
+    </button>
     <button id="openChats" aria-label="Мои чаты" title="Мои чаты">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="4" y1="6" x2="20" y2="6"></line>
@@ -1055,8 +1174,13 @@
       </svg>
     </button>
   </div>
+  <div class="drawer-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input type="text" id="chatSearchInput" placeholder="Поиск по чатам">
+  </div>
   <div class="drawer-list" id="chatList"></div>
   <div class="drawer-user" id="drawerUser">
+    <div class="user-avatar" id="userAvatar"></div>
     <div class="drawer-user-info">
       <span id="userEmailLabel"></span>
       <span id="userMethodBadge" class="user-method-badge"></span>
@@ -1087,8 +1211,18 @@
 
       <div id="changePasswordSection">
         <div class="account-modal-subtitle">Сменить пароль</div>
-        <input id="currentPasswordInput" class="auth-input" type="password" placeholder="Текущий пароль" autocomplete="current-password">
-        <input id="newPasswordInput" class="auth-input" type="password" placeholder="Новый пароль (мин. 6 символов)" autocomplete="new-password">
+        <div class="pw-field">
+          <input id="currentPasswordInput" class="auth-input" type="password" placeholder="Текущий пароль" autocomplete="current-password">
+          <button type="button" class="pw-toggle" data-target="currentPasswordInput" aria-label="Показать пароль">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
+        <div class="pw-field">
+          <input id="newPasswordInput" class="auth-input" type="password" placeholder="Новый пароль (мин. 6 символов)" autocomplete="new-password">
+          <button type="button" class="pw-toggle" data-target="newPasswordInput" aria-label="Показать пароль">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
         <div id="changePasswordError" class="auth-error"></div>
         <button id="changePasswordBtn" class="auth-submit-btn" type="button">Сменить пароль</button>
       </div>
@@ -1105,6 +1239,17 @@
       </div>
 
       <button id="signOutBtn" type="button">Выйти из аккаунта</button>
+    </div>
+  </div>
+
+  <div class="account-modal-overlay hide" id="galleryModalOverlay">
+    <div class="account-modal gallery-modal">
+      <div class="account-modal-header">
+        <div class="account-modal-title">Галерея</div>
+        <button id="closeGalleryModal" type="button">✕</button>
+      </div>
+      <p class="account-modal-hint">Картинки, сгенерированные в этой сессии. Пропадают при перезагрузке страницы — скачивай, что понравилось.</p>
+      <div class="gallery-grid" id="galleryGrid"></div>
     </div>
   </div>
   <div class="drawer-footer">
@@ -1155,6 +1300,7 @@
   const OPENROUTER_KEY = 'BUr9CyXcEBs3SHd482ntLNlwM56s0qXd';
 
   let currentMode = 'scout';
+  let sessionGallery = []; // картинки, сгенерированные за текущую сессию (в памяти, не персистятся)
   let isGenerating = false;
   let activeStreamController = null;
   let manualStop = false;
@@ -1193,6 +1339,8 @@
   const chatDrawer = document.getElementById('chatDrawer');
   const closeDrawerBtn = document.getElementById('closeDrawer');
   const chatListEl = document.getElementById('chatList');
+  const chatSearchInput = document.getElementById('chatSearchInput');
+  chatSearchInput.addEventListener('input', renderChatList);
   const newChatBtn = document.getElementById('newChatBtn');
 
   let STORAGE_KEY = 'wandex_chats_v1';
@@ -1306,17 +1454,43 @@
     });
   }
 
+  function chatGroupLabel(ts){
+    const now = new Date();
+    const d = new Date(ts);
+    const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+    if(diffDays <= 0) return 'Сегодня';
+    if(diffDays === 1) return 'Вчера';
+    if(diffDays <= 7) return 'На этой неделе';
+    return 'Раньше';
+  }
+
   function renderChatList(){
     chatListEl.innerHTML = '';
-    const list = sortedChats();
+    const query = (chatSearchInput.value || '').trim().toLowerCase();
+    let list = sortedChats();
+    if(query){
+      list = list.filter(c => c.title.toLowerCase().includes(query));
+    }
     if(list.length === 0){
       const empty = document.createElement('div');
       empty.className = 'drawer-empty';
-      empty.textContent = 'Чатов пока нет — создай первый.';
+      empty.textContent = query ? 'Ничего не нашлось.' : 'Чатов пока нет — создай первый.';
       chatListEl.appendChild(empty);
       return;
     }
+    let lastGroup = null;
     list.forEach(c => {
+      // Закреплённые чаты не разбиваем по датам — они всегда наверху одним блоком
+      const group = c.pinned ? 'Закреплённые' : chatGroupLabel(c.updatedAt);
+      if(group !== lastGroup){
+        const label = document.createElement('div');
+        label.className = 'chat-group-label';
+        label.textContent = group;
+        chatListEl.appendChild(label);
+        lastGroup = group;
+      }
+
       const item = document.createElement('div');
       item.className = 'chat-item' + (c.id === activeChatId ? ' active' : '');
 
@@ -1361,8 +1535,17 @@
         deleteChatById(c.id);
       });
 
+      const exportBtn = document.createElement('button');
+      exportBtn.setAttribute('aria-label', 'Экспортировать');
+      exportBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
+      exportBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        exportChatById(c.id);
+      });
+
       actions.appendChild(renameBtn);
       actions.appendChild(pinBtn);
+      actions.appendChild(exportBtn);
       actions.appendChild(delBtn);
       item.appendChild(actions);
 
@@ -1424,6 +1607,47 @@
     persistChats();
     if(wasActive) switchChat(activeChatId, true);
     renderChatList();
+  }
+
+  function historyToMarkdown(c){
+    const lines = [];
+    lines.push('# ' + c.title);
+    lines.push('');
+    lines.push('_Экспортировано из Wandex AI, ' + new Date(c.updatedAt).toLocaleString('ru-RU') + '_');
+    lines.push('');
+    (c.history || []).forEach(entry => {
+      if(entry.role === 'assistant'){
+        lines.push('**Wandex AI:**');
+        lines.push('');
+        lines.push(typeof entry.content === 'string' ? entry.content : String(entry.content));
+      }else{
+        lines.push('**Вы:**');
+        lines.push('');
+        const blocks = Array.isArray(entry.content) ? entry.content : [{ type: 'text', text: entry.content }];
+        const textParts = blocks.filter(b => b.type === 'text').map(b => b.text).filter(Boolean);
+        const imgCount = blocks.filter(b => b.type === 'image').length;
+        if(textParts.length) lines.push(textParts.join(' '));
+        if(imgCount) lines.push('_[прикреплено изображений: ' + imgCount + ']_');
+      }
+      lines.push('');
+    });
+    return lines.join('\n');
+  }
+
+  function exportChatById(id){
+    const c = findChat(id);
+    if(!c) return;
+    const md = historyToMarkdown(c);
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = c.title.replace(/[\\/:*?"<>|]/g, '_').slice(0, 50) || 'chat';
+    a.download = 'wandex-' + safeName + '.md';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 
   function renderMessagesFromHistory(hist){
@@ -1501,6 +1725,55 @@
   closeDrawerBtn.addEventListener('click', closeDrawer);
   drawerOverlay.addEventListener('click', closeDrawer);
   newChatBtn.addEventListener('click', createChat);
+
+  // --- Галерея сгенерированных картинок ---
+  const openGalleryBtn = document.getElementById('openGallery');
+  const galleryModalOverlay = document.getElementById('galleryModalOverlay');
+  const closeGalleryModal = document.getElementById('closeGalleryModal');
+  const galleryGrid = document.getElementById('galleryGrid');
+
+  function renderGallery(){
+    galleryGrid.innerHTML = '';
+    if(sessionGallery.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'gallery-empty';
+      empty.textContent = 'Пока пусто — сгенерируй что-нибудь в режиме "Художник".';
+      galleryGrid.appendChild(empty);
+      return;
+    }
+    sessionGallery.forEach(item => {
+      const cell = document.createElement('div');
+      cell.className = 'gallery-item';
+
+      const img = document.createElement('img');
+      img.src = item.url;
+      cell.appendChild(img);
+
+      const dl = document.createElement('a');
+      dl.className = 'gallery-dl';
+      dl.href = item.url;
+      dl.download = 'wandex-image.png';
+      dl.textContent = '⬇';
+      cell.appendChild(dl);
+
+      const caption = document.createElement('div');
+      caption.className = 'gallery-item-prompt';
+      caption.textContent = item.prompt;
+      caption.title = item.prompt;
+      cell.appendChild(caption);
+
+      galleryGrid.appendChild(cell);
+    });
+  }
+
+  openGalleryBtn.addEventListener('click', () => {
+    renderGallery();
+    galleryModalOverlay.classList.remove('hide');
+  });
+  closeGalleryModal.addEventListener('click', () => galleryModalOverlay.classList.add('hide'));
+  galleryModalOverlay.addEventListener('click', (e) => {
+    if(e.target === galleryModalOverlay) galleryModalOverlay.classList.add('hide');
+  });
 
   function clearRegenButtons(){
     chat.querySelectorAll('.regen-btn').forEach(b => b.remove());
@@ -2265,6 +2538,9 @@
       dl.style.cssText = 'display:inline-block;font-size:11px;color:var(--amber);margin-top:6px;text-decoration:none;';
       textEl.appendChild(dl);
 
+      sessionGallery.unshift({ url: imageUrl, prompt: prompt, time: Date.now() });
+      renderGallery();
+
       history.push({ role: 'assistant', content: '[картинка сгенерирована: "' + prompt + '" — не сохраняется между сессиями]' });
       saveState();
       chat.scrollTop = chat.scrollHeight;
@@ -2595,6 +2871,17 @@
 
   switchBtn.addEventListener('click', () => setMode(!isSignUpMode));
 
+  document.querySelectorAll('.pw-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if(!target) return;
+      const showing = target.type === 'text';
+      target.type = showing ? 'password' : 'text';
+      btn.classList.toggle('showing', !showing);
+      btn.setAttribute('aria-label', showing ? 'Показать пароль' : 'Скрыть пароль');
+    });
+  });
+
   const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
   forgotPasswordBtn.addEventListener('click', async () => {
     const email = emailInput.value.trim();
@@ -2615,267 +2902,3 @@
       forgotPasswordBtn.disabled = false;
     }
   });
-
-  function friendlyError(err){
-    const map = {
-      'auth/invalid-email': 'Некорректный email.',
-      'auth/user-not-found': 'Аккаунт с таким email не найден.',
-      'auth/wrong-password': 'Неверный пароль.',
-      'auth/invalid-credential': 'Неверный email или пароль.',
-      'auth/email-already-in-use': 'Этот email уже зарегистрирован — попробуй войти.',
-      'auth/weak-password': 'Пароль слишком короткий (минимум 6 символов).',
-      'auth/too-many-requests': 'Слишком много попыток. Подожди немного и попробуй снова.',
-      'auth/popup-closed-by-user': 'Окно входа было закрыто.',
-      'auth/network-request-failed': 'Проблема с сетью. Проверь интернет.',
-      'auth/unauthorized-domain': 'Этот домен не разрешён в Firebase (Authentication → Settings → Authorized domains).'
-    };
-    return map[err.code] || ('Ошибка входа: ' + (err.message || err.code || 'неизвестная'));
-  }
-
-  googleBtn.addEventListener('click', async () => {
-    errorEl.textContent = '';
-    errorEl.style.color = '';
-    googleBtn.disabled = true;
-    try{
-      // Сначала пробуем popup — если браузер его не заблокирует, вход происходит
-      // сразу, без перезагрузки страницы и без риска потерять состояние при переходе.
-      await signInWithPopup(auth, googleProvider);
-      googleBtn.disabled = false;
-    }catch(err){
-      const popupBlockedCodes = ['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request'];
-      if(popupBlockedCodes.includes(err.code)){
-        // Popup не сработал (заблокирован или окружение не поддерживает) — пробуем редирект как запасной вариант
-        try{
-          await signInWithRedirect(auth, googleProvider);
-        }catch(redirectErr){
-          errorEl.textContent = friendlyError(redirectErr);
-          googleBtn.disabled = false;
-        }
-      }else{
-        errorEl.textContent = friendlyError(err);
-        googleBtn.disabled = false;
-      }
-    }
-  });
-
-  // На случай, если сработал запасной вариант с редиректом — ловим результат при возврате.
-  getRedirectResult(auth).then((result) => {
-    // result === null здесь — совершенно нормально, если редирект вообще не использовался.
-  }).catch((err) => {
-    errorEl.style.color = '';
-    errorEl.textContent = friendlyError(err);
-  });
-
-  emailForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorEl.style.color = '';
-    errorEl.textContent = '';
-    submitBtn.disabled = true;
-    const originalSubmitText = submitBtn.textContent;
-    submitBtn.innerHTML = '<span class="btn-spinner"></span>Отправляем код…';
-    const email = emailInput.value.trim();
-    const password = passInput.value;
-    try{
-      await sendLoginCode(email, password, isSignUpMode);
-    }catch(err){
-      errorEl.textContent = err.message || 'Не удалось отправить код. Попробуй ещё раз.';
-    }finally{
-      submitBtn.disabled = false;
-      submitBtn.textContent = originalSubmitText;
-    }
-  });
-
-  signOutBtn.addEventListener('click', () => signOut(auth));
-
-  // --- Код подтверждения по email (через EmailJS + Firestore, без сервера) ---
-  const codeForm = document.getElementById('codeAuthForm');
-  const codeInput = document.getElementById('authCode');
-  const codeError = document.getElementById('codeError');
-  const codeSubmitBtn = document.getElementById('codeSubmitBtn');
-  const resendCodeBtn = document.getElementById('resendCodeBtn');
-  const backToFormBtn = document.getElementById('backToFormBtn');
-  const codeSentTo = document.getElementById('codeSentTo');
-
-  let pendingEmail = '';
-  let pendingPassword = '';
-  let pendingIsSignUp = false;
-  let resendCooldown = 0;
-  let resendTimer = null;
-
-  function codeDocId(email){
-    // Firestore не любит некоторые символы в id документа — заменяем их
-    return email.trim().toLowerCase().replace(/[\/\.#$\[\]]/g, '_');
-  }
-
-  function generateCode(){
-    return String(Math.floor(100000 + Math.random() * 900000)); // 6 цифр
-  }
-
-  const CODE_LIFETIME_MS = 15 * 60 * 1000; // код живёт 15 минут — совпадает с текстом в письме
-
-  async function sendLoginCode(email, password, isSignUp){
-    if(!email) throw new Error('Введи email.');
-    if(!password || password.length < 6) throw new Error('Пароль должен быть не короче 6 символов.');
-
-    const code = generateCode();
-    const docId = codeDocId(email);
-    const createdAt = Date.now();
-    await setDoc(doc(db, 'emailCodes', docId), {
-      code,
-      email,
-      createdAt,
-      attempts: 0
-    });
-
-    const expiryTime = new Date(createdAt + CODE_LIFETIME_MS)
-      .toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-    await window.emailjs.send('Wander ai', 'template_lo9dz01', {
-      passcode: code,
-      email: email,
-      time: expiryTime
-    });
-
-    pendingEmail = email;
-    pendingPassword = password;
-    pendingIsSignUp = isSignUp;
-
-    codeSentTo.textContent = email;
-    codeInput.value = '';
-    codeError.textContent = '';
-    emailForm.style.display = 'none';
-    document.querySelector('.auth-divider').style.display = 'none';
-    document.querySelector('.auth-switch').style.display = 'none';
-    codeForm.style.display = '';
-    startResendCooldown();
-  }
-
-  function startResendCooldown(){
-    resendCooldown = 30;
-    resendCodeBtn.disabled = true;
-    resendCodeBtn.textContent = 'Отправить код ещё раз (' + resendCooldown + 'с)';
-    clearInterval(resendTimer);
-    resendTimer = setInterval(() => {
-      resendCooldown--;
-      if(resendCooldown <= 0){
-        clearInterval(resendTimer);
-        resendCodeBtn.disabled = false;
-        resendCodeBtn.textContent = 'Отправить код ещё раз';
-      }else{
-        resendCodeBtn.textContent = 'Отправить код ещё раз (' + resendCooldown + 'с)';
-      }
-    }, 1000);
-  }
-
-  resendCodeBtn.addEventListener('click', async () => {
-    codeError.textContent = '';
-    resendCodeBtn.disabled = true;
-    const originalResendText = resendCodeBtn.textContent;
-    resendCodeBtn.innerHTML = '<span class="btn-spinner" style="border-color:rgba(154,160,181,0.35);border-top-color:var(--text-dim);"></span>Отправляем…';
-    try{
-      await sendLoginCode(pendingEmail, pendingPassword, pendingIsSignUp);
-      // при успехе sendLoginCode сам запускает startResendCooldown(), которая переустановит текст и disabled
-    }catch(err){
-      codeError.textContent = err.message || 'Не удалось отправить код.';
-      resendCodeBtn.disabled = false;
-      resendCodeBtn.textContent = originalResendText;
-    }
-  });
-
-  backToFormBtn.addEventListener('click', () => {
-    clearInterval(resendTimer);
-    codeForm.style.display = 'none';
-    emailForm.style.display = '';
-    document.querySelector('.auth-divider').style.display = '';
-    document.querySelector('.auth-switch').style.display = '';
-    errorEl.textContent = '';
-  });
-
-  codeForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    codeError.textContent = '';
-    codeSubmitBtn.disabled = true;
-    const enteredCode = codeInput.value.trim();
-    const docId = codeDocId(pendingEmail);
-    try{
-      const snap = await getDoc(doc(db, 'emailCodes', docId));
-      if(!snap.exists()){
-        codeError.textContent = 'Код устарел. Запроси новый.';
-        return;
-      }
-      const data = snap.data();
-      const AGE_LIMIT_MS = CODE_LIFETIME_MS; // код живёт 15 минут
-      if(Date.now() - data.createdAt > AGE_LIMIT_MS){
-        codeError.textContent = 'Код устарел. Запроси новый.';
-        await deleteDoc(doc(db, 'emailCodes', docId));
-        return;
-      }
-      if((data.attempts || 0) >= 5){
-        codeError.textContent = 'Слишком много попыток. Запроси новый код.';
-        await deleteDoc(doc(db, 'emailCodes', docId));
-        return;
-      }
-      if(data.code !== enteredCode){
-        await setDoc(doc(db, 'emailCodes', docId), { ...data, attempts: (data.attempts || 0) + 1 });
-        codeError.textContent = 'Неверный код. Попробуй ещё раз.';
-        return;
-      }
-
-      // Код верный — теперь по-настоящему входим/регистрируемся через Firebase Auth
-      await deleteDoc(doc(db, 'emailCodes', docId));
-      if(pendingIsSignUp){
-        await createUserWithEmailAndPassword(auth, pendingEmail, pendingPassword);
-      }else{
-        await signInWithEmailAndPassword(auth, pendingEmail, pendingPassword);
-      }
-    }catch(err){
-      codeError.textContent = friendlyError(err);
-    }finally{
-      codeSubmitBtn.disabled = false;
-    }
-  });
-
-  // Вызывается из основного скрипта приложения (persistChats), сохраняет
-  // текущие чаты пользователя в Firestore — по одному документу на аккаунт.
-  window.syncChatsToFirestore = async function(uid, chats, activeChatId){
-    try{
-      await setDoc(doc(db, 'wandexChats', uid), {
-        chats,
-        activeChatId,
-        updatedAt: serverTimestamp()
-      });
-    }catch(err){
-      console.error('Firestore sync failed:', err);
-    }
-  };
-
-  onAuthStateChanged(auth, async (user) => {
-    if(user){
-      authOverlay.classList.add('hide');
-      userEmailLabel.textContent = user.email || user.displayName || 'Аккаунт';
-      const method = getSignInMethod(user);
-      userMethodBadge.textContent = method === 'google' ? '● через Google' : '● через email';
-
-      let remoteData = null;
-      try{
-        const snap = await getDoc(doc(db, 'wandexChats', user.uid));
-        if(snap.exists()) remoteData = snap.data();
-      }catch(err){
-        console.error('Не удалось загрузить чаты из Firestore:', err);
-      }
-
-      window.startWandexApp(user.uid, remoteData);
-    }else{
-      authLoading.style.display = 'none';
-      authCard.style.display = '';
-      authOverlay.classList.remove('hide');
-      window.stopWandexApp();
-      emailInput.value = '';
-      passInput.value = '';
-      errorEl.textContent = '';
-    }
-  });
-</script>
-
-</body>
-  </html>
