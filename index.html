@@ -25,16 +25,13 @@
   html,body{height:100%;}
   body{
     margin:0;
-    background:
-      radial-gradient(circle at 15% 8%, rgba(180,134,62,0.06), transparent 40%),
-      radial-gradient(circle at 88% 78%, rgba(79,122,104,0.05), transparent 45%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420'%3E%3Cg fill='none' stroke='%23B4863E' stroke-opacity='0.05' stroke-width='1'%3E%3Cpath d='M-20 60 Q 90 10, 200 60 T 440 60'/%3E%3Cpath d='M-20 130 Q 100 190, 210 130 T 440 130'/%3E%3Cpath d='M-20 210 Q 80 160, 210 210 T 440 210'/%3E%3Cpath d='M-20 290 Q 110 340, 220 290 T 440 290'/%3E%3Cpath d='M-20 360 Q 90 320, 210 360 T 440 360'/%3E%3C/g%3E%3C/svg%3E"),
-      var(--bg);
+    background: var(--bg);
     color:var(--text);
     font-family:var(--font-body);
     display:flex;
     flex-direction:column;
     min-height:100vh;
+    min-height:100dvh;
   }
 
   /* header / trail */
@@ -621,14 +618,12 @@
     min-height:14px;
   }
   #app{display:none;}
-  #app.ready{display:flex;flex-direction:column;min-height:100vh;}
+  #app.ready{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;}
 
   /* --- Firebase Auth screen --- */
   .auth-overlay{
     position:fixed;inset:0;
-    background:
-      radial-gradient(circle at 15% 8%, rgba(180,134,62,0.08), transparent 40%),
-      var(--bg);
+    background: var(--bg);
     z-index:100;
     display:flex;
     align-items:center;
