@@ -1027,6 +1027,12 @@
   <div id="authLoading" class="auth-loading">
     <div class="auth-spinner"></div>
     <div class="auth-loading-text">Загрузка…</div>
+    <div id="authTimeoutMsg" style="display:none;margin-top:14px;text-align:center;max-width:280px;">
+      <div style="color:#D8A192;font-size:12.5px;line-height:1.5;margin-bottom:12px;">
+        Не удалось подключиться к серверу входа. Проверь интернет — возможно, домен firebaseapp.com/gstatic.com заблокирован в этой сети (например, VPN может помочь).
+      </div>
+      <button onclick="location.reload()" style="background:var(--amber);color:#1E170C;border:none;border-radius:2px;padding:9px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">Обновить страницу</button>
+    </div>
   </div>
   <div class="auth-card" id="authCard" style="display:none;">
     <svg class="brand-mark" viewBox="0 0 40 40" fill="none" style="margin:0 auto 10px;display:block;">
@@ -2669,8 +2675,19 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="text/javascript">
   (function(){
-    emailjs.init({ publicKey: '0RG1Wr0o3n7P-5RUV' });
+    try{ emailjs.init({ publicKey: '0RG1Wr0o3n7P-5RUV' }); }catch(e){ /* EmailJS не загрузился — не критично для авторизации */ }
   })();
+
+  // Подстраховка: если Firebase-модуль ниже не загрузится вообще (например, домен
+  // заблокирован в сети пользователя), спиннер "Загрузка…" не должен висеть вечно
+  // без объяснений — через 8 сек покажем понятную ошибку с кнопкой обновления.
+  setTimeout(function(){
+    var appEl = document.getElementById('app');
+    var msgEl = document.getElementById('authTimeoutMsg');
+    if(appEl && !appEl.classList.contains('ready') && msgEl){
+      msgEl.style.display = 'block';
+    }
+  }, 8000);
 </script>
 
 <script type="module">
@@ -2871,34 +2888,4 @@
 
   switchBtn.addEventListener('click', () => setMode(!isSignUpMode));
 
-  document.querySelectorAll('.pw-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = document.getElementById(btn.dataset.target);
-      if(!target) return;
-      const showing = target.type === 'text';
-      target.type = showing ? 'password' : 'text';
-      btn.classList.toggle('showing', !showing);
-      btn.setAttribute('aria-label', showing ? 'Показать пароль' : 'Скрыть пароль');
-    });
-  });
-
-  const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
-  forgotPasswordBtn.addEventListener('click', async () => {
-    const email = emailInput.value.trim();
-    errorEl.textContent = '';
-    if(!email){
-      errorEl.textContent = 'Сначала введи email в поле выше — на него пришлём ссылку для сброса пароля.';
-      return;
-    }
-    forgotPasswordBtn.disabled = true;
-    try{
-      await sendPasswordResetEmail(auth, email);
-      errorEl.style.color = '#8FD19E';
-      errorEl.textContent = 'Письмо со ссылкой для сброса пароля отправлено на ' + email + '.';
-    }catch(err){
-      errorEl.style.color = '';
-      errorEl.textContent = friendlyError(err);
-    }finally{
-      forgotPasswordBtn.disabled = false;
-    }
-  });
+  document.querySelect
