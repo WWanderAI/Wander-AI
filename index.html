@@ -1027,6 +1027,7 @@
   <div id="authLoading" class="auth-loading">
     <div class="auth-spinner"></div>
     <div class="auth-loading-text">Загрузка…</div>
+    <div id="authDebugStep" style="margin-top:10px;font-size:10.5px;color:var(--text-dim);"></div>
     <div id="authTimeoutMsg" style="display:none;margin-top:14px;text-align:center;max-width:280px;">
       <div style="color:#D8A192;font-size:12.5px;line-height:1.5;margin-bottom:12px;">
         Не удалось подключиться к серверу входа. Проверь интернет — возможно, домен firebaseapp.com/gstatic.com заблокирован в этой сети (например, VPN может помочь).
@@ -2728,10 +2729,19 @@
     measurementId: "G-B1DT46N64Q"
   };
 
+  function dbgStep(text){
+    const el = document.getElementById('authDebugStep');
+    if(el) el.textContent = text;
+  }
+  dbgStep('1/5: модуль запустился, импорты загружены');
+
   const fbApp = initializeApp(firebaseConfig);
+  dbgStep('2/5: initializeApp выполнен');
   const auth = getAuth(fbApp);
+  dbgStep('3/5: getAuth выполнен');
   const db = getFirestore(fbApp);
   const googleProvider = new GoogleAuthProvider();
+  dbgStep('4/5: всё готово, регистрируем onAuthStateChanged');
 
   const authOverlay = document.getElementById('authOverlay');
   const authLoading = document.getElementById('authLoading');
@@ -2877,15 +2887,4 @@
 
   let isSignUpMode = false;
 
-  function setMode(signUp){
-    isSignUpMode = signUp;
-    submitBtn.textContent = signUp ? 'Зарегистрироваться' : 'Войти';
-    switchText.textContent = signUp ? 'Уже есть аккаунт?' : 'Нет аккаунта?';
-    switchBtn.textContent = signUp ? 'Войти' : 'Зарегистрироваться';
-    errorEl.style.color = '';
-    errorEl.textContent = '';
-  }
-
-  switchBtn.addEventListener('click', () => setMode(!isSignUpMode));
-
-  document.querySelect
+  functio
