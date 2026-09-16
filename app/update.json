@@ -1,6 +1,6 @@
 {
-  "versionCode": 48,
-  "versionName": "1.47",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.47.apk",
-  "notes": "Что нового:\n• Черновики: недописанное сообщение больше не пропадает — сохраним сами\n• У каждого чата свой черновик"
+  "versionCode": 49,
+  "versionName": "1.48",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.48.apk",
+  "notes": "Что нового:\n• Исправлено: голосовой ввод дублировал текст ×3 — теперь диктовка чистая"
 }
