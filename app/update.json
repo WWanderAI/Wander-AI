@@ -1,6 +1,6 @@
 {
-  "versionCode": 47,
-  "versionName": "1.46",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.46.apk",
-  "notes": "Что нового:\n• Кнопка «Проверить обновления» вернулась в настройки\n• Персональный ключ подключается тихо, без лишних сообщений"
+  "versionCode": 48,
+  "versionName": "1.47",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.47.apk",
+  "notes": "Что нового:\n• Черновики: недописанное сообщение больше не пропадает — сохраним сами\n• У каждого чата свой черновик"
 }
