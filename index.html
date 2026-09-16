@@ -4,17 +4,20 @@
 <script>
 (function(){
 try{
-if(!window.__wandexPx){ window.__wandexPx=1; var __xf=window.fetch; var OR='https://openrouter.ai'; var PX='https://wandexai.noob15526.workers.dev';
+if(!window.__wandexPx){ window.__wandexPx=1; var __xf=window.fetch; var OR='https://openrouter.ai';
+var PX=['https://wandexai.noob15526.workers.dev'];
 window.fetch=function(){ var args=arguments;
 try{
 var u=(typeof args[0]==='string')?args[0]:((args[0]&&args[0].url)||'');
-if(String(u).indexOf(OR)<0){ return __xf.apply(window,args); }
-function viaPx(){ var s=String(u); var rest=(s.indexOf(OR)===0)? s.slice(OR.length):s;
-var purl=PX.replace(/\/+$/,'')+rest;
-var a2=[]; for(var i=0;i<args.length;i++){ a2.push(args[i]); }
+function starts(u2){ if(String(u2).indexOf(OR)===0){ return true; } for(var i=0;i<PX.length;i++){ if(String(u2).indexOf(PX[i])===0){ return true; } } return false; }
+if(!starts(u)){ return __xf.apply(window,args); }
+function toPx(u2,px){ var s=String(u2); if(s.indexOf(OR)===0){ return px.replace(/\/+$/,'')+s.slice(OR.length); } for(var i=0;i<PX.length;i++){ if(s.indexOf(PX[i])===0){ return px.replace(/\/+$/,'')+s.slice(PX[i].length); } } return px.replace(/\/+$/,'')+s; }
+function via(px){ var purl=toPx(u,px); var a2=[]; for(var i=0;i<args.length;i++){ a2.push(args[i]); }
 if(typeof a2[0]==='string'){ a2[0]=purl; } else if(a2[0]&&a2[0].url){ try{ a2[0]=new Request(purl,a2[0]); }catch(e1){ a2[0]=purl; } }
 return __xf.apply(window,a2); }
-return viaPx().then(function(r){ if(r&&r.status>=500){ return __xf.apply(window,args); } return r; },function(e1){ return __xf.apply(window,args); });
+function chain(i){ if(i>=PX.length){ return __xf.apply(window,args); }
+return via(PX[i]).then(function(r){ if(r&&(r.status===0||r.status>=500)&&i+1<PX.length){ return chain(i+1); } return r; },function(e2){ return chain(i+1); }); }
+return chain(0);
 }catch(e9){ return __xf.apply(window,args); } };
 }
 }catch(e){}})();
