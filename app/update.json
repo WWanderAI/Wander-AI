@@ -1,6 +1,6 @@
 {
-  "versionCode": 50,
-  "versionName": "1.49",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.49.apk",
-  "notes": "Что нового:\n• Обновление теперь всегда отвечает: скачалось, ошибка или нет интернета\n• Если скачивание зависло — сообщение и установка автоматически"
+  "versionCode": 51,
+  "versionName": "1.50",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.50.apk",
+  "notes": "Что нового:\n• Настройки стали чище: убраны «Характер ИИ», «Панель режимов», «Виджеты»\n• Убрана перезагрузка свайпом сверху"
 }
