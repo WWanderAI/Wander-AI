@@ -1,0 +1,6 @@
+{
+  "versionCode": 46,
+  "versionName": "1.45",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.45.apk",
+  "notes": "Что нового:\n• Персональный ключ OpenRouter — приложение само выдаёт и подключает\n• При лимите — запасной ключ или свой ключ за 10 секунд (вход в аккаунт)\n• Стабильность и скорость"
+}
