@@ -1,6 +1,6 @@
 {
-  "versionCode": 54,
-  "versionName": "1.53",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.53.apk",
-  "notes": "Что нового:\n• ИИ из России отвечает сразу: запросы идут через прокси без ожидания блокировки\n• Исправлена ошибка «403 Access denied»"
+  "versionCode": 55,
+  "versionName": "1.54",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.54.apk",
+  "notes": "Что нового:\n• ИИ работает из России гарантированно: адрес запросов меняется в самом коде страницы"
 }
