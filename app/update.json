@@ -1,6 +1,6 @@
 {
-  "versionCode": 49,
-  "versionName": "1.48",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.48.apk",
-  "notes": "Что нового:\n• Исправлено: голосовой ввод дублировал текст ×3 — теперь диктовка чистая"
+  "versionCode": 50,
+  "versionName": "1.49",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.49.apk",
+  "notes": "Что нового:\n• Обновление теперь всегда отвечает: скачалось, ошибка или нет интернета\n• Если скачивание зависло — сообщение и установка автоматически"
 }
