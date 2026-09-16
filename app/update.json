@@ -1,6 +1,6 @@
 {
-  "versionCode": 51,
-  "versionName": "1.50",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.50.apk",
-  "notes": "Что нового:\n• Настройки стали чище: убраны «Характер ИИ», «Панель режимов», «Виджеты»\n• Убрана перезагрузка свайпом сверху"
+  "versionCode": 52,
+  "versionName": "1.51",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.51.apk",
+  "notes": "Что нового:\n• ИИ теперь работает из России: при блокировке запросы автоматически идут через прокси\n• Готовит почву для модерации RuStore"
 }
