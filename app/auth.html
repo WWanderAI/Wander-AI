@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wandex ai — возврат в приложение</title>
+</head>
+<body style="background:#17140F;color:#EDE3CC;font-family:sans-serif;text-align:center;padding-top:40vh;margin:0">
+<div id="t">Возвращаюсь в приложение…</div>
+<script>
+try {
+  var c = new URLSearchParams(location.search).get("code");
+  if (c) {
+    location.replace("wandex://auth?code=" + encodeURIComponent(c));
+    setTimeout(function(){ document.getElementById("t").innerText = "Если приложение не открылось — вернись в Wandex ai и попробуй ещё раз."; }, 2500);
+  } else {
+    document.getElementById("t").innerText = "Код не получен — попробуй подключить ключ ещё раз.";
+  }
+} catch (e) {
+  document.getElementById("t").innerText = "Ошибка: " + e;
+}
+</script>
+</body>
+</html>
