@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<script>
+(function(){
+try{
+if(!window.__wandexPx){ window.__wandexPx=1; var __xf=window.fetch; var OR='https://openrouter.ai'; var PX='https://wandexai.noob15526.workers.dev';
+window.fetch=function(){ var args=arguments;
+try{
+var u=(typeof args[0]==='string')?args[0]:((args[0]&&args[0].url)||'');
+if(String(u).indexOf(OR)<0){ return __xf.apply(window,args); }
+function viaPx(){ var s=String(u); var rest=(s.indexOf(OR)===0)? s.slice(OR.length):s;
+var purl=PX.replace(/\/+$/,'')+rest;
+var a2=[]; for(var i=0;i<args.length;i++){ a2.push(args[i]); }
+if(typeof a2[0]==='string'){ a2[0]=purl; } else if(a2[0]&&a2[0].url){ try{ a2[0]=new Request(purl,a2[0]); }catch(e1){ a2[0]=purl; } }
+return __xf.apply(window,a2); }
+return viaPx().then(function(r){ if(r&&r.status>=500){ return __xf.apply(window,args); } return r; },function(e1){ return __xf.apply(window,args); });
+}catch(e9){ return __xf.apply(window,args); } };
+}
+}catch(e){}})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wandex AI</title>
