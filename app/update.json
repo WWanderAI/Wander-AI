@@ -1,6 +1,6 @@
 {
-  "versionCode": 65,
-  "versionName": "1.64",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.64.apk",
-  "notes": "Что нового:\n• Связь с ИИ без подвисаний; любая ошибка теперь содержит точную причину"
+  "versionCode": 66,
+  "versionName": "1.65",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.65.apk",
+  "notes": "Что нового:\n• Уточнённая диагностика связи: точное место сбоя в сообщении об ошибке"
 }
