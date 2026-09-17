@@ -1414,6 +1414,12 @@ return chain(0);
     vertical-align:-2px;
     margin-right:6px;
   }
+
+  .wm-think{display:flex;gap:6px;align-items:baseline;margin-top:2px;font:600 12.5px/1.4 var(--font-body);font-style:normal;}
+  .wm-think-st{background:linear-gradient(90deg,var(--text-dim) 30%,var(--amber) 50%,var(--text-dim) 70%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:wmShimmer 1.6s linear infinite;}
+  .wm-think-tm{color:var(--text-dim);opacity:.75;font-weight:500;}
+  .wm-think.wm-done .wm-think-st{animation:none;background:none;color:var(--amber);-webkit-text-fill-color:var(--amber);}
+  @keyframes wmShimmer{from{background-position:200% 0;}to{background-position:-200% 0;}}
 </style>
 </head>
 <body>
@@ -3276,7 +3282,65 @@ return chain(0);
     return '';
   }
 
+function wmThinkStart(bubble){
+    if(!bubble || !bubble.classList || !bubble.classList.contains('pending')) return;
+    var oldB = bubble.querySelector('.wm-think'); if(oldB) oldB.remove();
+    var tx = bubble.querySelector('.msg-text'); if(!tx) return;
+    tx.textContent = '';
+    var q = '';
+    try{
+      for(var i = history.length - 1; i >= 0; i--){ if(history[i] && history[i].role === 'user'){ q = String(history[i].content || ''); break; } }
+    }catch(e0){}
+    q = q.replace(/\[[^\]]*\]\s*/g, ' ').toLowerCase();
+    var stages;
+    if(/код|функци|скрипт|программ|ошибк|почин|не работает|bug|js|python|html|css|api/.test(q)){
+      stages = ['изучаю задачу…','продумываю структуру кода…','пишу код…','проверяю, что нигде не налажал…'];
+    } else if(/скольк|реши|уравнен|пример|матем|посчитай|вычисл/.test(q)){
+      stages = ['вникаю в условие…','считаю…','перепроверяю вычисления…','сверяю ответ ещё раз…'];
+    } else if(/объясн|почему|как работает|что такое|разниц|зачем/.test(q)){
+      stages = ['вникаю в вопрос…','разбираю по частям…','подбираю простые примеры…','собираю объяснение…'];
+    } else if(/^привет|^здравств|^хай|^ку$|как дела/.test(q)){
+      stages = ['рад тебя видеть…','соображаю, что ответить…'];
+    } else {
+      stages = ['вникаю в вопрос…','думаю…'];
+    }
+    stages = stages.concat(['придумываю варианты…','придумал пару вариантов, выбираю лучший…','подбираю слова…','складываю ответ по частям…','прикидываю, как сказать точнее…','полирую формулировку…','почти готово…']);
+    var box = document.createElement('div'); box.className = 'wm-think';
+    var st = document.createElement('span'); st.className = 'wm-think-st';
+    var tm = document.createElement('span'); tm.className = 'wm-think-tm';
+    box.appendChild(st); box.appendChild(tm);
+    tx.parentNode.insertBefore(box, tx.nextSibling);
+    var t0 = Date.now(), nextAt = 0, last = '';
+    function pick(){
+      for(var k = 0; k < 5; k++){
+        var cand = stages[Math.floor(Math.random() * stages.length)];
+        if(cand !== last) return cand;
+      }
+      return stages[0];
+    }
+    var iv = setInterval(function(){
+      if(!bubble.isConnected){ clearInterval(iv); return; }
+      var now = Date.now();
+      if(!bubble.classList.contains('pending')){
+        st.textContent = 'Готово';
+        tm.textContent = '· ' + Math.round((now - t0) / 1000) + ' с';
+        box.classList.add('wm-done');
+        clearInterval(iv);
+        setTimeout(function(){ if(box.parentNode) box.parentNode.removeChild(box); }, 900);
+        return;
+      }
+      var d = Math.round((now - t0) / 1000);
+      tm.textContent = '· ' + d + ' с';
+      if(d > 60){ st.textContent = 'долго думаю, но не сдаюсь…'; nextAt = now + 5000; }
+      if(now >= nextAt){
+        var s2 = pick(); last = s2; st.textContent = s2;
+        nextAt = now + 1500 + Math.floor(Math.random() * 700);
+      }
+    }, 400);
+  }
+
   async function runCompletion(pendingEl){
+    try{ wmThinkStart(pendingEl); }catch(eT){}
     setGenerating(true);
     manualStop = false;
     try{
