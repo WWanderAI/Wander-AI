@@ -3297,11 +3297,15 @@ return chain(0);
       }
 
       let data;
+      let rawTxt = '';
       try{
-        data = await response.json();
+        rawTxt = await response.text();
+        data = JSON.parse(rawTxt);
       }catch(e){
         clearTimeout(timeoutId);
-        throw new Error('Сервер вернул нечитаемый ответ.' + (window.__wandexDiag ? ' (связь: ' + window.__wandexDiag + ')' : ''));
+        const fr2 = rawTxt ? rawTxt.replace(/\s+/g,' ').slice(0,90) : '';
+        const dg2 = window.__wandexDiag ? ' [связь: ' + window.__wandexDiag + ']' : '';
+        throw new Error('Сервер вернул нечитаемый ответ.' + (fr2 ? ' Фрагмент: «' + fr2 + '»' : '') + dg2);
       }
 
       clearTimeout(timeoutId);
