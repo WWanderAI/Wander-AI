@@ -3301,7 +3301,7 @@ return chain(0);
         data = await response.json();
       }catch(e){
         clearTimeout(timeoutId);
-        throw new Error('Сервер вернул нечитаемый ответ.');
+        throw new Error('Сервер вернул нечитаемый ответ.' + (window.__wandexDiag ? ' (связь: ' + window.__wandexDiag + ')' : ''));
       }
 
       clearTimeout(timeoutId);
