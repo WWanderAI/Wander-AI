@@ -1,6 +1,6 @@
 {
-  "versionCode": 61,
-  "versionName": "1.60",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.60.apk",
-  "notes": "Что нового:\n• Связь с ИИ теперь сама обходит проблемы DNS: настройки телефона не нужны"
+  "versionCode": 62,
+  "versionName": "1.61",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.61.apk",
+  "notes": "Что нового:\n• Умнее связь с ИИ: резервные DNS-каналы и точная диагностика соединения"
 }
