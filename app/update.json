@@ -1,6 +1,6 @@
 {
-  "versionCode": 63,
-  "versionName": "1.62",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.62.apk",
-  "notes": "Что нового:\n• Обход новой блокировки связи: соединение больше не называет имя сервера — блокировать нечего"
+  "versionCode": 64,
+  "versionName": "1.63",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.63.apk",
+  "notes": "Что нового:\n• Связь с ИИ: быстрый защищённый маршрут первым и подробная диагностика в сообщении об ошибке"
 }
