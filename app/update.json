@@ -1,6 +1,6 @@
 {
-  "versionCode": 60,
-  "versionName": "1.59",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.59.apk",
-  "notes": "Что нового:\n• Возвращён маршрут к OpenRouter через релей: наш ИИ и наши бесплатные модели"
+  "versionCode": 61,
+  "versionName": "1.60",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.60.apk",
+  "notes": "Что нового:\n• Связь с ИИ теперь сама обходит проблемы DNS: настройки телефона не нужны"
 }
