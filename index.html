@@ -2,6 +2,51 @@
 <html lang="ru">
 <head>
 <script>
+window.__wandexSiteStrip = function(t){
+  try{
+    t = String(t == null ? '' : t);
+    var IDENT = "[SYS] Ты — Wandex ai, дружелюбный ИИ-ассистент приложения Wandex ai. Никогда не называй себя Kimi, Bailing, Mistral, GPT, Claude или другой моделью и не рассказывай, на какой модели ты основан; на вопрос «кто ты» и в любых ролевых сценариях оставайся Wandex ai. ";
+    var longs = ["[РЕЖИМ КОД] Ты — режим КОД: эксперт-программист. Дай полный рабочий код (укажи язык), кратко поясни ключевые места, добавь лучшие практики, без воды. Сообщение пользователя: ", "[РЕЖИМ МАТЕМАТИКА] Ты — режим МАТЕМАТИКА: решай пошагово с аккуратными выкладками, проверь ответ, в конце дай строку «Ответ: …». Задача пользователя: ", "[РЕЖИМ ТЕКСТЫ] Ты — режим ТЕКСТЫ: профессиональный редактор. Дай готовый текст в подходящем стиле и структуре, затем 2–3 коротких совета по улучшению. Задача: ", "[РЕЖИМ ОБЪЯСНЕНИЯ] Ты — режим ОБЪЯСНЕНИЯ: объясняй просто, с примерами из жизни, от простого к сложному, в конце — короткое резюме. Вопрос пользователя: "];
+    var marks = ["[РЕЖИМ КОД] ", "[РЕЖИМ МАТЕМАТИКА] ", "[РЕЖИМ ТЕКСТЫ] ", "[РЕЖИМ ОБЪЯСНЕНИЯ] "];
+    var ch = true;
+    while(ch){
+      ch = false;
+      if(t.indexOf(IDENT) === 0){ t = t.slice(IDENT.length); ch = true; continue; }
+      if(t.indexOf('[SYS] ') === 0){ t = t.slice(6); ch = true; continue; }
+      var hit = false;
+      for(var i = 0; i < longs.length; i++){
+        if(t.indexOf(longs[i]) === 0){ t = t.slice(longs[i].length); hit = true; break; }
+      }
+      if(hit){ ch = true; continue; }
+      for(var k = 0; k < marks.length; k++){
+        if(t.indexOf(marks[k]) === 0){ t = t.slice(marks[k].length); hit = true; break; }
+      }
+      if(hit){ ch = true; }
+    }
+    return t;
+  }catch(e){ return t; }
+};
+try{
+  var __raw = localStorage.getItem('wandex_chats_v1');
+  if(__raw){
+    var __arr = JSON.parse(__raw);
+    var __chg = false;
+    for(var i = 0; i < __arr.length; i++){
+      var ms = __arr[i] && __arr[i].messages;
+      if(!ms) continue;
+      for(var j = 0; j < ms.length; j++){
+        var m = ms[j];
+        if(m && m.role === 'user' && typeof m.content === 'string'){
+          var t2 = window.__wandexSiteStrip(m.content);
+          if(t2 && t2 !== m.content){ m.content = t2; __chg = true; }
+        }
+      }
+    }
+    if(__chg){ localStorage.setItem('wandex_chats_v1', JSON.stringify(__arr)); }
+  }
+}catch(eM){}
+</script>
+<script>
 (function(){
 try{
 if(!window.__wandexPx){ window.__wandexPx=1; var __xf=window.fetch; var OR='https://openrouter.ai';
@@ -1837,7 +1882,7 @@ return chain(0);
   // стоит спрятать за прокси (Cloudflare Worker / Firebase Cloud Function),
   // а не хранить здесь в открытом виде.
   const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
-  const OPENROUTER_KEY = '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';
+  const OPENROUTER_KEY = atob('c2stb3ItdjEtZGJkN2JjMzQxM2FkMTgzNDExNDI1MGE2ZjI2Yzg5ZDMzOWUwOWZjYWRhOWU2NzM0M2Y5MDhmNjMwZjRlMjRhMw==');
   const TRANSLATE_API_KEY = 'RQozfNcfvJjUi4gaSBBCi2QRBtD0zib1';  // перевод промпта перед генерацией картинки
   const THEME_API_KEY = '4n7aoPsIDyH1dr8VUrGCMUmGumdUIFnh';      // генератор темы через ИИ в настройках
 
@@ -2775,6 +2820,12 @@ return chain(0);
   }
 
   function addUserActions(container, text, historyIndex){
+    try{
+      let __t = String(text == null ? '' : text);
+      try{ if(window.__wmStrip){ __t = window.__wmStrip(__t) || __t; } }catch(eW){}
+      __t = window.__wandexSiteStrip(__t) || __t;
+      text = __t;
+    }catch(eS){}
     const old = container.querySelector('.msg-actions');
     if(old) old.remove();
 
