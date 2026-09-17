@@ -1,6 +1,6 @@
 {
-  "versionCode": 69,
-  "versionName": "1.68",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.68.apk",
-  "notes": "Что нового:\n• Исправлена сборка ответов с русским текстом — причина ошибки «нечитаемый ответ»"
+  "versionCode": 70,
+  "versionName": "1.69",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.69.apk",
+  "notes": "Что нового:\n• Расширенная диагностика: любая ошибка сети покажет точную причину и фрагмент ответа"
 }
