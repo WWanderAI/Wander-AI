@@ -2183,7 +2183,7 @@ return chain(0);
         new MutationObserver(() => {
           if(tmr) return;
           tmr = setTimeout(() => { tmr = null; try{ wmFilesScan(); }catch(e1){} }, 250);
-        }).observe(chat, { childList: true });
+        }).observe(chat, { childList: true, subtree: true });
       }
     }catch(e2){}
   }
@@ -3446,6 +3446,7 @@ function wmThinkStart(bubble){
         tm.textContent = '· ' + Math.round((now - t0) / 1000) + ' с';
         box.classList.add('wm-done');
         clearInterval(iv);
+        try{ wmFilesScan(); }catch(eF){}
         setTimeout(function(){ if(box.parentNode) box.parentNode.removeChild(box); }, 900);
         return;
       }
