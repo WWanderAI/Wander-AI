@@ -3279,7 +3279,12 @@ return chain(0);
       }
       if(response.status >= 500){
         clearTimeout(timeoutId);
-        throw new Error('Сервер временно недоступен (ошибка ' + response.status + '). Попробуй чуть позже.');
+        let detail5xx = '';
+        try{
+          const errData5 = await response.json();
+          detail5xx = (errData5 && errData5.error && errData5.error.message) ? String(errData5.error.message) : ((errData5 && errData5.message) ? String(errData5.message) : '');
+        }catch(e){ /* тело не JSON — общий текст */ }
+        throw new Error(detail5xx || ('Сервер временно недоступен (ошибка ' + response.status + '). Попробуй чуть позже.'));
       }
       if(!response.ok){
         clearTimeout(timeoutId);
