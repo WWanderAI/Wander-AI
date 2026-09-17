@@ -1,6 +1,6 @@
 {
-  "versionCode": 58,
-  "versionName": "1.57",
-  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.57.apk",
-  "notes": "Что нового:\n• Убрана система прокси — приложение работает напрямую с OpenRouter"
+  "versionCode": 59,
+  "versionName": "1.58",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.58.apk",
+  "notes": "Что нового:\n• Подготовлен выбор провайдера ИИ — включается без обновления приложения"
 }
