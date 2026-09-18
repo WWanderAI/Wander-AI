@@ -1445,6 +1445,34 @@ return chain(0);
   @keyframes wmReveal{from{opacity:0;filter:blur(16px);transform:scale(1.035);}to{opacity:1;filter:blur(0);transform:scale(1);}}
   .wm-imgskel.wm-out{animation:wmSkelOut .5s ease both;}
   @keyframes wmSkelOut{to{opacity:0;transform:scale(.97);}}
+
+  /* === Слой плавности v15 === */
+  .msg{animation:wmMsgIn .38s cubic-bezier(.22,1,.36,1) both;}
+  @keyframes wmMsgIn{from{opacity:0;transform:translateY(12px) scale(.984);}to{opacity:1;transform:none;}}
+  .msg-actions button,.regen-btn{transition:transform .16s cubic-bezier(.22,1,.36,1),background-color .2s ease,border-color .2s ease;}
+  .msg-actions button:active{transform:scale(.94);}
+  .wm-filecard{animation:wmCardIn .45s cubic-bezier(.22,1,.36,1) both;transition:transform .16s ease;}
+  .wm-filecard:active{transform:scale(.985);}
+  @keyframes wmCardIn{from{opacity:0;transform:translateY(8px) scale(.975);}to{opacity:1;transform:none;}}
+  .wm-fv{animation:wmFvIn .34s cubic-bezier(.22,1,.36,1) both;}
+  .wm-fv.closing{animation:wmFvOut .24s ease both;}
+  @keyframes wmFvIn{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:none;}}
+  @keyframes wmFvOut{to{opacity:0;transform:scale(.975);}}
+  .wm-think-st{animation:wmShimmer 2.3s ease-in-out infinite;background:linear-gradient(90deg,var(--text-dim) 25%,var(--amber) 50%,var(--text-dim) 75%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;}
+  .wm-think{transition:opacity .45s ease;}
+  .wm-think.wm-done{animation:wmDonePop .34s cubic-bezier(.34,1.56,.64,1) both;opacity:0;transition:opacity .4s ease .55s;}
+  @keyframes wmDonePop{from{transform:scale(.82);}to{transform:scale(1);}}
+  .wm-blob{animation:wmBlob 9s ease-in-out infinite alternate;}
+  @keyframes wmBlob{0%{transform:translate(0,0) scale(1);}50%{transform:translate(-9%,13%) scale(1.16);}100%{transform:translate(15%,9%) scale(1.28);}}
+  .wm-sweep{animation:wmSweep 2.7s ease-in-out infinite;}
+  .wm-imgskel{animation:wmBreathe 4.2s ease-in-out infinite;}
+  @keyframes wmBreathe{0%,100%{transform:scale(1);}50%{transform:scale(1.012);}}
+  .wm-img-reveal{animation:wmReveal 1.05s cubic-bezier(.16,1,.3,1) both;}
+  @keyframes wmReveal{from{opacity:0;filter:blur(26px);transform:scale(1.055);}to{opacity:1;filter:blur(0);transform:scale(1);}}
+  .wm-imgskel.wm-out{animation:wmSkelOut .6s ease both;}
+  @keyframes wmSkelOut{to{opacity:0;filter:blur(10px);transform:scale(.955);}}
+  .wm-st-t{transition:opacity .19s ease;}
+  .wm-st-s{opacity:.82;}
 </style>
 </head>
 <body>
@@ -2147,7 +2175,7 @@ return chain(0);
     document.body.appendChild(ov);
     reBtn.addEventListener('click', () => { fr.setAttribute('srcdoc', ''); setTimeout(() => fr.setAttribute('srcdoc', code), 30); });
     dlBtn.addEventListener('click', () => wmFileDownload(code, name));
-    clBtn.addEventListener('click', () => ov.remove());
+    clBtn.addEventListener('click', () => { ov.classList.add('closing'); setTimeout(() => ov.remove(), 235); });
   }
 
   function wmFilesScan(){
@@ -3461,7 +3489,7 @@ function wmThinkStart(bubble){
         box.classList.add('wm-done');
         clearInterval(iv);
         try{ wmFilesScan(); }catch(eF){}
-        setTimeout(function(){ if(box.parentNode) box.parentNode.removeChild(box); }, 900);
+        setTimeout(function(){ if(box.parentNode) box.parentNode.removeChild(box); }, 1150);
         return;
       }
       var d = Math.round((now - t0) / 1000);
@@ -3712,18 +3740,27 @@ function wmThinkStart(bubble){
     const b3 = document.createElement('div'); b3.className = 'wm-blob wm-b3';
     const sweep = document.createElement('div'); sweep.className = 'wm-sweep';
     const st = document.createElement('div'); st.className = 'wm-st';
+    const stT = document.createElement('span'); stT.className = 'wm-st-t';
+    const stS = document.createElement('span'); stS.className = 'wm-st-s';
+    st.appendChild(stT); st.appendChild(stS);
     skel.appendChild(b1); skel.appendChild(b2); skel.appendChild(b3); skel.appendChild(sweep); skel.appendChild(st);
     tx.textContent = '';
     tx.appendChild(skel);
     const t0 = Date.now();
     const iv = setInterval(() => {
       if(!skel.isConnected){ clearInterval(iv); return; }
-      st.textContent = (skel._st || '') + ' · ' + Math.round((Date.now() - t0) / 1000) + ' с';
+      stS.textContent = ' · ' + Math.round((Date.now() - t0) / 1000) + ' с';
     }, 500);
     skel._st = 'Готовим холст…';
-    st.textContent = skel._st;
+    stT.textContent = skel._st;
+    stS.textContent = ' · 0 с';
     return {
-      set(t){ skel._st = t; },
+      set(t){
+        if(skel._st === t) return;
+        skel._st = t;
+        stT.style.opacity = '0';
+        setTimeout(() => { stT.textContent = skel._st; stT.style.opacity = '1'; }, 190);
+      },
       done(){ clearInterval(iv); },
       el: skel
     };
