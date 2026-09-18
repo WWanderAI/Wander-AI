@@ -1431,6 +1431,20 @@ return chain(0);
   .wm-fv-head .wm-fv-name{color:var(--amber);font:700 13px/1 var(--font-body);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .wm-fv-head button{border:1px solid var(--line);background:transparent;color:var(--text);border-radius:9px;padding:7px 10px;font:600 12.5px/1 var(--font-body);cursor:pointer;}
   .wm-fv iframe{flex:1;width:100%;border:0;background:#fff;}
+
+  .wm-imgskel{position:relative;width:min(78vw,340px);aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:var(--bg-panel-2);}
+  .wm-imgskel .wm-blob{position:absolute;width:55%;height:55%;border-radius:50%;filter:blur(38px);opacity:.55;animation:wmBlob 7s ease-in-out infinite alternate;}
+  .wm-b1{background:#8a5cf6;top:-12%;left:-10%;}
+  .wm-b2{background:#f59e0b;bottom:-15%;right:-8%;animation-delay:-2.3s;}
+  .wm-b3{background:#3b82f6;top:30%;left:35%;animation-delay:-4.6s;opacity:.4;}
+  @keyframes wmBlob{from{transform:translate(0,0) scale(1);}to{transform:translate(14%,10%) scale(1.25);}}
+  .wm-imgskel .wm-sweep{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.14) 45%,rgba(255,255,255,.28) 50%,rgba(255,255,255,.14) 55%,transparent 70%);background-size:250% 250%;animation:wmSweep 1.9s linear infinite;}
+  @keyframes wmSweep{from{background-position:120% 0;}to{background-position:-130% 0;}}
+  .wm-imgskel .wm-st{position:absolute;left:8px;right:8px;bottom:10px;text-align:center;font:600 12.5px/1.3 var(--font-body);color:var(--text);text-shadow:0 1px 6px rgba(0,0,0,.55);}
+  .wm-img-reveal{animation:wmReveal .8s ease both;}
+  @keyframes wmReveal{from{opacity:0;filter:blur(16px);transform:scale(1.035);}to{opacity:1;filter:blur(0);transform:scale(1);}}
+  .wm-imgskel.wm-out{animation:wmSkelOut .5s ease both;}
+  @keyframes wmSkelOut{to{opacity:0;transform:scale(.97);}}
 </style>
 </head>
 <body>
@@ -3689,19 +3703,45 @@ function wmThinkStart(bubble){
     }
   }
 
+  function wmImageSkeleton(pendingEl){
+    const tx = pendingEl.querySelector('.msg-text');
+    const skel = document.createElement('div');
+    skel.className = 'wm-imgskel';
+    const b1 = document.createElement('div'); b1.className = 'wm-blob wm-b1';
+    const b2 = document.createElement('div'); b2.className = 'wm-blob wm-b2';
+    const b3 = document.createElement('div'); b3.className = 'wm-blob wm-b3';
+    const sweep = document.createElement('div'); sweep.className = 'wm-sweep';
+    const st = document.createElement('div'); st.className = 'wm-st';
+    skel.appendChild(b1); skel.appendChild(b2); skel.appendChild(b3); skel.appendChild(sweep); skel.appendChild(st);
+    tx.textContent = '';
+    tx.appendChild(skel);
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      if(!skel.isConnected){ clearInterval(iv); return; }
+      st.textContent = (skel._st || '') + ' · ' + Math.round((Date.now() - t0) / 1000) + ' с';
+    }, 500);
+    skel._st = 'Готовим холст…';
+    st.textContent = skel._st;
+    return {
+      set(t){ skel._st = t; },
+      done(){ clearInterval(iv); },
+      el: skel
+    };
+  }
+
   async function runImageGeneration(pendingEl, prompt){
     setGenerating(true);
     manualStop = false;
+    const skel = wmImageSkeleton(pendingEl);
     const controller = new AbortController();
     activeStreamController = controller;
     const IMAGE_TIMEOUT_MS = 60 * 1000; // картинка генерируется куда быстрее видео
     const timeoutId = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
 
     try{
-      const textEl0 = pendingEl.querySelector('.msg-text');
-      if(textEl0) textEl0.textContent = 'Переводим запрос…';
+      skel.set('Переводим запрос…');
       const englishPrompt = await translatePromptToEnglish(prompt);
-      if(textEl0) textEl0.textContent = 'Рисуем картинку…';
+      skel.set('Рисуем картинку…');
 
       // Flux-картинки у Pollinations бесплатны и без ограничений даже без ключа.
       const seed = Math.floor(Math.random() * 1000000);
@@ -3739,12 +3779,35 @@ function wmThinkStart(bubble){
 
       pendingEl.classList.remove('pending');
       const textEl = pendingEl.querySelector('.msg-text');
-      textEl.innerHTML = '';
+      textEl.style.position = 'relative';
       const imgTag = document.createElement('img');
       imgTag.src = imageUrl;
+      imgTag.alt = 'Сгенерированная картинка';
       imgTag.style.width = '100%';
       imgTag.style.borderRadius = '10px';
       imgTag.style.display = 'block';
+      imgTag.style.opacity = '0';
+      imgTag.style.position = 'absolute';
+      imgTag.style.inset = '0';
+      const skelEl = skel.el;
+      const wmImgSettle = () => {
+        if(skelEl.parentNode){ skelEl.parentNode.removeChild(skelEl); }
+        imgTag.style.position = '';
+        imgTag.style.inset = '';
+        textEl.style.position = '';
+      };
+      imgTag.addEventListener('load', () => {
+        skel.done();
+        skelEl.classList.add('wm-out');
+        imgTag.classList.add('wm-img-reveal');
+        imgTag.style.opacity = '';
+        setTimeout(wmImgSettle, 560);
+      });
+      imgTag.addEventListener('error', () => {
+        skel.done();
+        wmImgSettle();
+        imgTag.style.opacity = '';
+      });
       textEl.appendChild(imgTag);
       const dl = document.createElement('a');
       dl.href = imageUrl;
