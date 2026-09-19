@@ -50,7 +50,7 @@ try{
 (function(){
 try{
 if(!window.__wandexPx){ window.__wandexPx=1; var __xf=window.fetch; var OR='https://openrouter.ai';
-var PX=['https://wandexai.noob15526.workers.dev','https://hazy-hamster-7342.wandexai.deno.net'];
+var PX=['https://hazy-hamster-7342.wandexai.deno.net','https://wandexai.noob15526.workers.dev'];
 window.fetch=function(){ var args=arguments;
 try{
 var u=(typeof args[0]==='string')?args[0]:((args[0]&&args[0].url)||'');
@@ -1936,17 +1936,17 @@ return chain(0);
     scout: {
       label: 'Скаут',
       system: 'Ты — Wandex AI в режиме "Скаут". Отвечай кратко, по делу, без лишних слов. Максимум 3-4 предложения, если не попросили подробнее.' + NO_THINKING,
-      max_tokens: 1500
+      max_tokens: 1200
     },
     pathfinder: {
       label: 'Следопыт',
       system: 'Ты — Wandex AI в режиме "Следопыт". Отвечай сбалансированно: достаточно подробно, чтобы быть полезным, но без воды.' + NO_THINKING,
-      max_tokens: 2500
+      max_tokens: 3000
     },
     navigator: {
       label: 'Штурман',
       system: 'Ты — Wandex AI в режиме "Штурман". Разбирай вопрос глубоко: структурируй ответ, рассматривай детали, приводи примеры и оговорки, где это уместно.' + NO_THINKING,
-      max_tokens: 4000
+      max_tokens: 8000
     },
     video: {
       label: 'Видео',
@@ -2215,7 +2215,6 @@ return chain(0);
       const tx = msg.querySelector('.msg-text');
       if(!tx) continue;
       const pres = tx.querySelectorAll('pre');
-      if(!pres.length){ continue; } // пустой/ожидающий пузырь — размечаем только когда появился код
       const cards = [];
       let idx = 0;
       for(const pre of pres){
@@ -2834,9 +2833,6 @@ return chain(0);
       }
       const data = await response.json();
       let raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-      if(!raw && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.reasoning_content){
-        raw = String(data.choices[0].message.reasoning_content).slice(-1200);
-      }
       raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
 
       let colors;
@@ -3563,10 +3559,9 @@ function wmThinkStart(bubble){
             'X-Title': 'Wandex AI'
           },
           body: JSON.stringify({
-            model: 'inclusionai/ling-3.0-flash-sante:free',
+            model: 'openrouter/free',
             messages: openAiMessages,
             max_tokens: mode.max_tokens,
-            reasoning: { enabled: false },
             stream: false
           }),
           signal: controller.signal
@@ -3631,7 +3626,17 @@ function wmThinkStart(bubble){
         throw new Error('Не удалось разобрать ответ сервера.');
       }
 
-      reply = stripTrailingPeriod(reply.trim());
+      reply = reply.trim();
+      {
+        const fences = (reply.match(/```/g) || []).length;
+        if(fences % 2 === 1){
+          const lastFence = reply.lastIndexOf('```');
+          const after = reply.slice(lastFence + 3).replace(/^[a-z]*\n/, '');
+          const closing = /<\/\s*(html|body|script|style)\s*>\s*$/i.test(after.trim()) ? '\n```' : '\n…\n```';
+          reply = reply + closing;
+        }
+      }
+      reply = stripTrailingPeriod(reply);
       const textEl = pendingEl.querySelector('.msg-text');
       pendingEl.classList.remove('pending');
       textEl.innerHTML = renderMarkdown(reply);
