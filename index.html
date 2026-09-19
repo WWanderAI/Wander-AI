@@ -1926,7 +1926,7 @@ return chain(0);
     if(left > 0){
       const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000);
       wmImgCdBar.style.display = 'flex';
-      wmImgCdBar.textContent = '\ud83d\udc23 Кисть заряжается · ' + mm + ':' + String(ss).padStart(2, '0');
+      wmImgCdBar.textContent = '\ud83c\udfa8 Кисть заряжается · ' + mm + ':' + String(ss).padStart(2, '0');
     } else if(wmImgCdBar.style.display !== 'none'){
       wmImgCdBar.style.display = 'none';
     }
@@ -3696,7 +3696,7 @@ function wmThinkStart(bubble){
       const wmLeft = wmImageCooldownLeft();
       if(wmLeft > 0){
         const mm = Math.floor(wmLeft / 60000), ss = Math.floor((wmLeft % 60000) / 1000);
-        addMessage('error', '\ud83d\udc23 Кисть заряжается: ' + mm + ':' + String(ss).padStart(2, '0') + '. Отдохни — и генерируй снова.');
+        addMessage('error', '\ud83c\udfa8 Кисть заряжается: ' + mm + ':' + String(ss).padStart(2, '0') + '. Попробуй немного позже.');
         return;
       }
       const userDiv = addMessage('user', text, {});
@@ -3857,10 +3857,22 @@ function wmThinkStart(bubble){
         throw new Error('Сеть ответила с ошибкой ' + response.status + (detail ? ': ' + detail.slice(0, 150) : ''));
       }
 
-      const blob = await response.blob();
-      if(!blob.type.startsWith('image/')){
+      const blob0 = await response.blob();
+      if(!blob0.type.startsWith('image/')){
         throw new Error('Сервер вернул не картинку — возможно, запрос отклонён фильтром безопасности.');
       }
+      // Срезаем нижние 8%: там водяной знак движка
+      let blob = blob0;
+      try{
+        const bmp = await createImageBitmap(blob0);
+        const cv = document.createElement('canvas');
+        cv.width = bmp.width;
+        cv.height = Math.round(bmp.height * 0.92);
+        const cx = cv.getContext('2d');
+        cx.drawImage(bmp, 0, 0, bmp.width, bmp.height, 0, 0, bmp.width, cv.height);
+        blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.92));
+        if(!blob) blob = blob0;
+      }catch(eC){ /* не вышло — оставляем как есть */ }
       const imageUrl = URL.createObjectURL(blob);
 
       pendingEl.classList.remove('pending');
