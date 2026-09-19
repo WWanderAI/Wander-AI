@@ -3923,6 +3923,10 @@ function wmThinkStart(bubble){
       tx.appendChild(chip);
       const body = document.createElement('div');
       body.innerHTML = renderMarkdown(reply);
+      try{
+        body.innerHTML = body.innerHTML.replace(/\[([^\]<]+)\]\((https?:\/\/[^\s<)]+)\)/g,
+          '<a href="$2" target="_blank" rel="noopener" style="color:var(--amber);text-decoration:underline;word-break:break-all;">$1</a>');
+      }catch(eL){}
       tx.appendChild(body);
       history.push({ role: 'assistant', content: reply });
       addAiActions(pendingEl, reply, true);
