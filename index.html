@@ -1936,17 +1936,17 @@ return chain(0);
     scout: {
       label: 'Скаут',
       system: 'Ты — Wandex AI в режиме "Скаут". Отвечай кратко, по делу, без лишних слов. Максимум 3-4 предложения, если не попросили подробнее.' + NO_THINKING,
-      max_tokens: 400
+      max_tokens: 1500
     },
     pathfinder: {
       label: 'Следопыт',
       system: 'Ты — Wandex AI в режиме "Следопыт". Отвечай сбалансированно: достаточно подробно, чтобы быть полезным, но без воды.' + NO_THINKING,
-      max_tokens: 900
+      max_tokens: 2500
     },
     navigator: {
       label: 'Штурман',
       system: 'Ты — Wandex AI в режиме "Штурман". Разбирай вопрос глубоко: структурируй ответ, рассматривай детали, приводи примеры и оговорки, где это уместно.' + NO_THINKING,
-      max_tokens: 1600
+      max_tokens: 4000
     },
     video: {
       label: 'Видео',
@@ -2833,6 +2833,9 @@ return chain(0);
       }
       const data = await response.json();
       let raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      if(!raw && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.reasoning_content){
+        raw = String(data.choices[0].message.reasoning_content).slice(-1200);
+      }
       raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
 
       let colors;
@@ -3559,9 +3562,10 @@ function wmThinkStart(bubble){
             'X-Title': 'Wandex AI'
           },
           body: JSON.stringify({
-            model: 'openrouter/free',
+            model: 'inclusionai/ling-3.0-flash-sante:free',
             messages: openAiMessages,
             max_tokens: mode.max_tokens,
+            reasoning: { enabled: false },
             stream: false
           }),
           signal: controller.signal
