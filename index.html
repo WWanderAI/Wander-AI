@@ -3698,6 +3698,24 @@ function wmThinkStart(bubble){
       return;
     }
 
+    const wmSearchIntent = /(^|\s)(найди|поищи|погугли|загугли|поиск)([\s,!?.:]|$)/i.test(text) || /в\s+интернет/i.test(text) || /(^|\s)новости\b/i.test(text);
+    if(wmSearchIntent && !/^\s*(нарисуй|изобрази)/i.test(text)){
+      if(!text){ return; }
+      const userDiv = addMessage('user', text, {});
+      history.push({ role: 'user', content: [{ type: 'text', text: text }] });
+      const userIndex = history.length - 1;
+      userDiv.dataset.historyIndex = userIndex;
+      addUserActions(userDiv, text, userIndex);
+      saveState();
+      input.value = '';
+      input.style.height = 'auto';
+      sendBtn.disabled = true;
+      const pendingEl = addMessage('ai', 'Ищу в интернете…', { pending: true });
+      await runSearchAnswer(pendingEl, text);
+      sendBtn.disabled = false;
+      return;
+    }
+
     const wmImgDirect = /(\u043d\u0430\u0440\u0438\u0441|\u0438\u0437\u043e\u0431\u0440\u0430\u0437|\u0437\u0430\u043c\u0430\u043b\u044e\u0439|\u043d\u0430\u043b\u044e\u043f|draw\b|paint\b|imagine\b)/i.test(text);
     const wmImgVerb = /(\u0441\u0433\u0435\u043d\u0435\u0440\u0438\u0440|\u0441\u043e\u0437\u0434\u0430\u0439|\u0441\u0434\u0435\u043b\u0430\u0439|\u0441\u043e\u0437\u0434\u0430\u0432|\u0441\u0432\u0430\u0440\u0433\u0430\u043d|\u0441\u043c\u0430\u0441\u0442\u0435\u0440\u0438|\u043d\u0430\u043a\u0438\u043d\u044c|\u043d\u0430\u0431\u0430\u0433\u0430\u0439|generate|create|make)/i.test(text);
     const wmImgNoun = /(\u043a\u0430\u0440\u0442\u0438\u043d|\u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d|\u0440\u0438\u0441\u0443\u043d|\u0444\u043e\u0442\u043e|\u043b\u043e\u0433\u043e\u0442\u0438\u043f|\u044d\u043c\u0431\u043b\u0435\u043c|\u0438\u043b\u043b\u044e\u0441\u0442\u0440\u0430\u0446|\u0430\u0432\u0430\u0442\u0430\u0440|\u043e\u0431\u043e\u0438|\u043e\u0431\u043e\u0439|\u0430\u0440\u0442|\u0430\u043d\u0438\u043c\u0435|\u043c\u0435\u043c|\u043f\u043e\u0440\u0442\u0440\u0435\u0442|\u043f\u0435\u0439\u0437\u0430\u0436|\u0441\u043a\u0435\u0442\u0447|\u043a\u0430\u0440\u0438\u043a\u0430\u0442\u0443\u0440|image|picture|logo|art\b|wallpaper|drawing|photo)/i.test(text);
@@ -3777,6 +3795,142 @@ function wmThinkStart(bubble){
       return (translated && translated.trim()) ? translated.trim() : text;
     }catch(e){
       return text; // перевод не критичен — просто продолжаем с оригиналом
+    }
+  }
+
+  async function wmWebSearch(query){
+    const items = [];
+    const jobs = [];
+    jobs.push((async()=>{
+      try{
+        const r = await fetch('https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + encodeURIComponent(query) + '&format=json&origin=*&srlimit=3');
+        const d = await r.json();
+        for(const sc of ((d.query && d.query.search) || [])){
+          items.push({ t: String(sc.title || ''), u: 'https://ru.wikipedia.org/wiki/' + encodeURIComponent(String(sc.title || '').replace(/ /g, '_')), s: String(sc.snippet || '').replace(/<[^>]+>/g, '') });
+        }
+      }catch(e0){}
+    })());
+    jobs.push((async()=>{
+      try{
+        const r = await fetch('https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1');
+        const d = await r.json();
+        if(d.AbstractText){ items.push({ t: String(d.Heading || 'DuckDuckGo'), u: String(d.AbstractURL || 'https://duckduckgo.com'), s: String(d.AbstractText) }); }
+        let n = 0;
+        for(const rt of (d.RelatedTopics || [])){
+          if(rt && rt.Text && rt.FirstURL && n < 3){ items.push({ t: String(rt.Text).slice(0, 90), u: String(rt.FirstURL), s: String(rt.Text) }); n++; }
+        }
+      }catch(e1){}
+    })());
+    if(/курс|доллар|евро|рубл|юан|биткоин|биткойн|bitcoin|ethereum|эфириум|крипто/i.test(query)){
+      jobs.push((async()=>{
+        try{
+          if(/биткоин|биткойн|bitcoin|ethereum|эфириум/i.test(query)){
+            const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,rub');
+            const d = await r.json();
+            const parts = [];
+            if(d.bitcoin){ parts.push('Bitcoin: $' + d.bitcoin.usd + ' (~' + d.bitcoin.rub + ' руб.)'); }
+            if(d.ethereum){ parts.push('Ethereum: $' + d.ethereum.usd + ' (~' + d.ethereum.rub + ' руб.)'); }
+            if(parts.length){ items.push({ t: 'Курсы криптовалют — данные сейчас', u: 'https://www.coingecko.com', s: parts.join('; ') }); }
+          }
+          if(/доллар|евро|рубл|юан|курс/i.test(query)){
+            const r = await fetch('https://open.er-api.com/v6/latest/USD');
+            const d = await r.json();
+            if(d && d.rates && d.rates.RUB && d.rates.EUR){
+              items.push({ t: 'Курсы валют — данные сейчас', u: 'https://www.exchangerate-api.com', s: '1 USD = ' + d.rates.RUB + ' руб.; 1 EUR = ' + (d.rates.RUB / d.rates.EUR).toFixed(2) + ' руб. (обновление ежедневно)' });
+            }
+          }
+        }catch(e2){}
+      })());
+    }
+    if(/новост|техно|гадж|нейрос|искусственн|intelligen|\bai\b|openai|google|apple|it\b/i.test(query)){
+      jobs.push((async()=>{
+        try{
+          const r = await fetch('https://hn.algolia.com/api/v1/search?query=' + encodeURIComponent(query) + '&hitsPerPage=3');
+          const d = await r.json();
+          for(const h of (d.hits || [])){
+            if(h.title && h.url){ items.push({ t: String(h.title).slice(0, 90), u: String(h.url), s: 'Свежее с Hacker News: ' + h.title }); }
+          }
+        }catch(e3){}
+      })());
+    }
+    await Promise.all(jobs);
+    const seen = new Set();
+    const out = [];
+    for(const it of items){
+      if(it && it.s && String(it.s).length > 25 && it.u && !seen.has(it.u)){ seen.add(it.u); out.push(it); }
+    }
+    return out.slice(0, 6);
+  }
+
+  async function runSearchAnswer(pendingEl, query){
+    setGenerating(true);
+    manualStop = false;
+    const skel = wmImageSkeleton(pendingEl);
+    const controller = new AbortController();
+    activeStreamController = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 90 * 1000);
+    try{
+      skel.set('Ищу в интернете…');
+      const found = await wmWebSearch(query);
+      if(!found.length){
+        clearTimeout(timeoutId);
+        pendingEl.remove();
+        addMessage('error', '🌐 Не смог ничего найти в интернете. Попробуй переформулировать запрос.');
+        return;
+      }
+      skel.set('Читаю источники…');
+      const ctx = found.map((it, i) => ('[' + (i + 1) + '] ' + it.t + '\n' + it.u + '\n' + it.s)).join('\n\n');
+      const sys = 'Ты — Wandex AI. Пользователь попросил найти информацию в интернете. Тебе даны свежие результаты поиска. Ответь ПО-РУССКИ кратко и по делу, опираясь на эти результаты. Если данных недостаточно — честно скажи это. В конце добавь раздел «Источники:» и перечисли 2-4 ссылки в Markdown-формате [название](ссылка).' + NO_THINKING;
+      const payload = {
+        model: 'inclusionai/ling-3.0-flash-sante:free',
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: 'Вопрос: ' + query + '\n\nРезультаты поиска:\n' + ctx }
+        ],
+        max_tokens: 2500,
+        reasoning: { enabled: false }
+      };
+      const response = await fetch(OPENROUTER_CHAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENROUTER_KEY },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      if(!response.ok){
+        clearTimeout(timeoutId);
+        pendingEl.remove();
+        addMessage('error', '🌐 Нашёл в интернете, но ИИ не смог обработать результат (ошибка ' + response.status + '). Попробуй ещё раз.');
+        return;
+      }
+      const data = await response.json();
+      clearTimeout(timeoutId);
+      if(manualStop){ pendingEl.remove(); return; }
+      let reply = extractGenApiText(data);
+      if(!reply){ throw new Error('пустой ответ'); }
+      reply = stripTrailingPeriod(reply.trim());
+      if(!/\]\(http/.test(reply)){
+        reply += '\n\nИсточники:\n' + found.slice(0, 3).map((it, i) => ('[' + (i + 1) + '] [' + it.t + '](' + it.u + ')')).join('\n');
+      }
+      pendingEl.classList.remove('pending');
+      const tx = pendingEl.querySelector('.msg-text');
+      tx.innerHTML = '';
+      const chip = document.createElement('div');
+      chip.style.cssText = 'display:inline-block;font-size:11px;font-weight:600;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:2px 8px;margin-bottom:6px;opacity:.9;';
+      chip.textContent = '🌐 Нашёл в интернете: ' + found.length + ' источн.';
+      tx.appendChild(chip);
+      const body = document.createElement('div');
+      body.innerHTML = renderMarkdown(reply);
+      tx.appendChild(body);
+      history.push({ role: 'assistant', content: reply });
+      addAiActions(pendingEl, reply, true);
+      saveState();
+    }catch(eS){
+      clearTimeout(timeoutId);
+      try{ pendingEl.remove(); }catch(e4){}
+      addMessage('error', '🌐 Поиск не удался: ' + (eS && eS.message ? eS.message : 'нет соединения') + '. Попробуй ещё раз.');
+    }finally{
+      setGenerating(false);
+      activeStreamController = null;
     }
   }
 
