@@ -3585,7 +3585,7 @@ function wmThinkStart(bubble){
       if(response.status === 429){
         clearTimeout(timeoutId);
         const retryAfter = response.headers.get('retry-after');
-        throw new Error('Сейчас слишком много запросов.' + (retryAfter ? ' Попробуй снова через ' + retryAfter + ' сек.' : ' Подожди немного и попробуй снова.'));
+        throw new Error('Дневной бесплатный лимит исчерпан. Обновится утром около 05:00 — возвращайся! 🌙');
       }
       if(response.status >= 500){
         clearTimeout(timeoutId);
