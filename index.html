@@ -1479,6 +1479,30 @@ return chain(0);
 </head>
 <body>
 
+<div id="bootSplash" style="position:fixed;inset:0;background:#0d0b07;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:99999;">
+  <div style="font-size:52px;line-height:1;animation:bootPulse 1.4s ease-in-out infinite;">🧭</div>
+  <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:700;color:#f5e6c8;letter-spacing:.5px;">Wandex AI</div>
+  <div style="font-size:13px;color:#9a8a6a;">Загрузка…</div>
+  <div style="font-size:11px;color:#6a5f48;">Если долго висит — проверь интернет</div>
+</div>
+<style>@keyframes bootPulse{0%,100%{opacity:.45;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}</style>
+<script>
+(function(){
+  function hideBoot(){
+    var sp = document.getElementById('bootSplash');
+    if(!sp) return;
+    try{
+      sp.style.transition = 'opacity .45s ease';
+      sp.style.opacity = '0';
+      setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); }, 500);
+    }catch(e0){ if(sp.parentNode) sp.parentNode.removeChild(sp); }
+  }
+  if(document.readyState === 'complete'){ setTimeout(hideBoot, 350); }
+  else{ window.addEventListener('load', function(){ setTimeout(hideBoot, 350); }); }
+  setTimeout(hideBoot, 12000);
+})();
+</script>
+
 <div id="authOverlay" class="auth-overlay">
   <div id="authLoading" class="auth-loading">
     <div class="auth-spinner"></div>
