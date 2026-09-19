@@ -3776,14 +3776,25 @@ function wmThinkStart(bubble){
     const timeoutId = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
 
     try{
-      skel.set('Переводим запрос…');
+      skel.set('Понимаю, что рисовать…');
       const englishPrompt = await translatePromptToEnglish(prompt);
-      skel.set('Рисуем картинку…');
+      skel.set('Продумываю детали…');
 
+      // Голый промпт даёт кашу — добавляем качество и стиль под задачу.
+      let styleHint = ', highly detailed, sharp focus, beautiful lighting, high quality digital art';
+      if(/\u0430\u043d\u0438\u043c\u0435|anime|manga/i.test(prompt)){
+        styleHint = ', anime style, vibrant colors, detailed anime illustration, studio quality';
+      } else if(/\u043b\u043e\u0433\u043e\u0442\u0438\u043f|\u044d\u043c\u0431\u043b\u0435\u043c\u0443|logo|icon/i.test(prompt)){
+        styleHint = ', clean vector logo design, flat, minimalistic, centered, solid background';
+      } else if(/\u0444\u043e\u0442\u043e|\u0440\u0435\u0430\u043b\u0438\u0441\u0442|photorealistic|realistic|portrait/i.test(prompt)){
+        styleHint = ', photorealistic, ultra detailed, 8k, professional photography';
+      }
+      const prettyPrompt = englishPrompt + styleHint;
       // Flux-картинки у Pollinations бесплатны и без ограничений даже без ключа.
       const seed = Math.floor(Math.random() * 1000000);
-      const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(englishPrompt)
-        + '?width=1024&height=1024&model=flux&nologo=true&seed=' + seed;
+      const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prettyPrompt)
+        + '?width=1024&height=1024&model=flux&nologo=true&enhance=true&private=true&seed=' + seed;
+      skel.set('Рисую картинку…');
 
       let response;
       try{
