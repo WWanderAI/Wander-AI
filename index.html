@@ -2215,6 +2215,7 @@ return chain(0);
       const tx = msg.querySelector('.msg-text');
       if(!tx) continue;
       const pres = tx.querySelectorAll('pre');
+      if(!pres.length){ continue; }
       const cards = [];
       let idx = 0;
       for(const pre of pres){
