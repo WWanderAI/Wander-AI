@@ -1479,48 +1479,7 @@ return chain(0);
 </head>
 <body>
 
-<div id="bootSplash" style="position:fixed;inset:0;background:#0d0b07;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:99999;">
-  <div style="font-size:52px;line-height:1;animation:bootPulse 1.4s ease-in-out infinite;">🧭</div>
-  <div style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:700;color:#f5e6c8;letter-spacing:.5px;">Wandex AI</div>
-  <div id="bootMsg" style="font-size:13px;color:#9a8a6a;">Загрузка…</div>
-  <div style="font-size:11px;color:#6a5f48;">Если долго висит — проверь интернет</div>
-  <button id="bootReload" type="button" onclick="location.reload(true)" style="display:none;margin-top:8px;background:#f0b64a;color:#241a06;border:0;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:700;">⟳ Обновить</button>
-  <a id="bootDl" href="download.html" style="display:none;margin-top:6px;font-size:12px;color:#f0b64a;">Переустановить приложение</a>
-</div>
-<style>@keyframes bootPulse{0%,100%{opacity:.45;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}</style>
-<script>
-(function(){
-  var t0 = Date.now();
-  function ready(){
-    try{ return (typeof window.startWandexApp === 'function') && !!document.getElementById('authOverlay'); }catch(e0){ return false; }
-  }
-  function hideBoot(){
-    var sp = document.getElementById('bootSplash');
-    if(!sp) return;
-    try{
-      sp.style.transition = 'opacity .45s ease';
-      sp.style.opacity = '0';
-      setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); }, 500);
-    }catch(e1){ if(sp.parentNode) sp.parentNode.removeChild(sp); }
-  }
-  window.__wmHideBoot = hideBoot;
-  var iv = setInterval(function(){
-    if(ready()){ clearInterval(iv); setTimeout(hideBoot, 250); return; }
-    var d = Math.round((Date.now() - t0) / 1000);
-    var m = document.getElementById('bootMsg');
-    if(m){
-      if(d > 25){ m.textContent = 'Связь очень медленная, качаем приложение…'; }
-      else if(d > 10){ m.textContent = 'Всё ещё загружаем…'; }
-    }
-    var btn = document.getElementById('bootReload');
-    if(d > 40 && btn && btn.style.display !== 'inline-block'){
-      btn.style.display = 'inline-block';
-      var lnk = document.getElementById('bootDl');
-      if(lnk) lnk.style.display = 'block';
-    }
-  }, 250);
-})();
-</script>
+
 
 <div id="authOverlay" class="auth-overlay">
   <div id="authLoading" class="auth-loading">
@@ -1578,10 +1537,6 @@ return chain(0);
       <button id="authSwitchBtn" type="button">Зарегистрироваться</button>
     </div>
 
-    <div style="text-align:center;margin:10px 0 2px;">
-      <a id="authApkLink" href="https://cdn.jsdelivr.net/gh/wwanderai/Wander-AI@main/app/WandexAI-v1.70.apk" download style="display:inline-block;font-size:13px;font-weight:600;color:var(--amber);text-decoration:none;border:1px solid var(--amber);border-radius:10px;padding:7px 14px;">📱 Скачать приложение (APK)</a>
-      <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">не качается? <a href="https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.70.apk" download style="color:var(--amber);">запасная ссылка</a></div>
-    </div>
 
     <div class="auth-legal-note">
       Продолжая, вы соглашаетесь с
