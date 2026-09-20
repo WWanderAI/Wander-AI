@@ -3656,6 +3656,10 @@ function wmThinkStart(bubble){
       }
 
       reply = reply.trim();
+      // Модели иногда отдают HTML без ```-фенсов — оборачиваем, иначе карточка файла не соберётся
+      if(!/```/.test(reply) && /^\s*(<!doctype\s+html|<html[\s>])/i.test(reply)){
+        reply = '```html\n' + reply;
+      }
       {
         const fences = (reply.match(/```/g) || []).length;
         if(fences % 2 === 1){
@@ -3663,6 +3667,13 @@ function wmThinkStart(bubble){
           const after = reply.slice(lastFence + 3).replace(/^[a-z]*\n/, '');
           const closing = /<\/\s*(html|body|script|style)\s*>\s*$/i.test(after.trim()) ? '\n```' : '\n…\n```';
           reply = reply + closing;
+        }
+        // Обрубленный код достраиваем минимальным хвостом — файл откроется
+        if(/```html/.test(reply) && !/<\/\s*html\s*>/i.test(reply)){
+          const inner = reply.split('```html')[1] || '';
+          if(!/<\/\s*script\s*>/i.test(inner)) reply += '\n</script>';
+          if(!/<\/\s*body\s*>/i.test(inner)) reply += '\n</body>';
+          reply += '\n</html>\n```';
         }
       }
       reply = stripTrailingPeriod(reply);
