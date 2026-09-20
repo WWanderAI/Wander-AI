@@ -1974,7 +1974,18 @@ return chain(0);
   const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
   const OPENROUTER_KEY = atob('c2stb3ItdjEtZGJkN2JjMzQxM2FkMTgzNDExNDI1MGE2ZjI2Yzg5ZDMzOWUwOWZjYWRhOWU2NzM0M2Y5MDhmNjMwZjRlMjRhMw==');
   // Цепочка моделей: сильнейшая первой, при отказе авто-переход к следующей
-  const CHAT_MODELS = ['deepseek/deepseek-v4-flash-0731:free', 'z-ai/glm-5.2:free', 'inclusionai/ling-3.0-flash-sante:free'];
+  const CHAT_MODELS = [
+    'deepseek/deepseek-v4-flash-0731:free',
+    'z-ai/glm-5.2:free',
+    'nvidia/nemotron-3-ultra-550b-a55b:free',
+    'poolside/laguna-s-2.1:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'google/gemma-4-31b-it:free',
+    'qwen/qwen3.8-27b:free',
+    'thinkingmachines/inkling:free',
+    'cohere/north-mini-code:free',
+    'inclusionai/ling-3.0-flash-sante:free'
+  ];
   const TRANSLATE_API_KEY = 'RQozfNcfvJjUi4gaSBBCi2QRBtD0zib1';  // перевод промпта перед генерацией картинки
   const THEME_API_KEY = '4n7aoPsIDyH1dr8VUrGCMUmGumdUIFnh';      // генератор темы через ИИ в настройках
 
