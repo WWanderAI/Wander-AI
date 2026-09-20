@@ -3671,9 +3671,9 @@ function wmThinkStart(bubble){
         // Обрубленный код достраиваем минимальным хвостом — файл откроется
         if(/```html/.test(reply) && !/<\/\s*html\s*>/i.test(reply)){
           const inner = reply.split('```html')[1] || '';
-          if(!/<\/\s*script\s*>/i.test(inner)) reply += '\n</script>';
-          if(!/<\/\s*body\s*>/i.test(inner)) reply += '\n</body>';
-          reply += '\n</html>\n```';
+          if(!/<\/\s*script\s*>/i.test(inner)) reply += '\n<\/script>';
+          if(!/<\/\s*body\s*>/i.test(inner)) reply += '\n<\/body>';
+          reply += '\n<\/html>\n```';
         }
       }
       reply = stripTrailingPeriod(reply);
