@@ -2212,7 +2212,7 @@ return chain(0);
     clBtn.textContent = '✕';
     head.appendChild(nm); head.appendChild(reBtn); head.appendChild(dlBtn); head.appendChild(clBtn);
     const fr = document.createElement('iframe');
-    fr.setAttribute('sandbox', 'allow-scripts allow-modals allow-forms allow-popups');
+    fr.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-modals allow-forms allow-popups');
     fr.setAttribute('srcdoc', code);
     ov.appendChild(head); ov.appendChild(fr);
     document.body.appendChild(ov);
@@ -2277,9 +2277,11 @@ return chain(0);
 
   function renderMarkdown(raw){
     let s = escapeHtml(raw);
-    s = s.replace(/```(?:\w*\n)?([\s\S]*?)```/g, (m, code) => '<pre><code>' + code.trim() + '</code></pre>');
+    const wmFenceStash = [];
+    s = s.replace(/```(?:\w*\n)?([\s\S]*?)```/g, (m, code) => { wmFenceStash.push('<pre><code>' + code.trim() + '</code></pre>'); return '\u0000WMFENCE' + (wmFenceStash.length - 1) + '\u0000'; });
     s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\u0000WMFENCE(\d+)\u0000/g, (m, i) => wmFenceStash[+i]);
     return s;
   }
 
