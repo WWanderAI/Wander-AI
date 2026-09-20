@@ -1973,6 +1973,8 @@ return chain(0);
   // а не хранить здесь в открытом виде.
   const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
   const OPENROUTER_KEY = atob('c2stb3ItdjEtZGJkN2JjMzQxM2FkMTgzNDExNDI1MGE2ZjI2Yzg5ZDMzOWUwOWZjYWRhOWU2NzM0M2Y5MDhmNjMwZjRlMjRhMw==');
+  // Цепочка моделей: сильнейшая первой, при отказе авто-переход к следующей
+  const CHAT_MODELS = ['deepseek/deepseek-v4-flash-0731:free', 'z-ai/glm-5.2:free', 'inclusionai/ling-3.0-flash-sante:free'];
   const TRANSLATE_API_KEY = 'RQozfNcfvJjUi4gaSBBCi2QRBtD0zib1';  // перевод промпта перед генерацией картинки
   const THEME_API_KEY = '4n7aoPsIDyH1dr8VUrGCMUmGumdUIFnh';      // генератор темы через ИИ в настройках
 
@@ -2104,7 +2106,7 @@ return chain(0);
 
   const MAX_IMAGES = 5; // модель mistral-small-latest — текстовая, прикреплённые картинки не будут поняты
   const MAX_BYTES = 5 * 1024 * 1024; // 5MB per image, safety cap
-  const REQUEST_TIMEOUT_MS = 30000; // не ждём ответ сервера дольше 30 сек
+  const REQUEST_TIMEOUT_MS = 300000; // большие игры пишутся по 2-3 минуты — ждём до 5
   const MAX_HISTORY_MESSAGES = 24; // сколько последних сообщений реально шлём модели (полная история хранится локально)
 
   // Отправляем модели только последние N сообщений, чтобы не упираться
@@ -3551,31 +3553,44 @@ function wmThinkStart(bubble){
         timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       }
 
-      let response;
-      try{
-        response = await fetch(OPENROUTER_CHAT_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + OPENROUTER_KEY,
-            'HTTP-Referer': location.origin,
-            'X-Title': 'Wandex AI'
-          },
-          body: JSON.stringify({
-            model: 'openrouter/free',
-            messages: openAiMessages,
-            max_tokens: mode.max_tokens,
-            stream: false
-          }),
-          signal: controller.signal
-        });
-      }catch(fetchErr){
-        clearTimeout(timeoutId);
-        if(fetchErr.name === 'AbortError'){
-          throw new Error('Сервер не ответил вовремя (таймаут ' + (REQUEST_TIMEOUT_MS/1000) + ' сек). Проверь соединение и попробуй ещё раз.');
+      let response = null;
+      let lastNetErr = null;
+      let lastStatus = 0;
+      for(var MDLi = 0; MDLi < CHAT_MODELS.length; MDLi++){
+        try{
+          response = await fetch(OPENROUTER_CHAT_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Bearer ' + OPENROUTER_KEY,
+              'HTTP-Referer': location.origin,
+              'X-Title': 'Wandex AI'
+            },
+            body: JSON.stringify({
+              model: CHAT_MODELS[MDLi],
+              messages: openAiMessages,
+              max_tokens: mode.max_tokens,
+              stream: false,
+              reasoning: { enabled: false }
+            }),
+            signal: controller.signal
+          });
+          if(response.status === 429 || response.status === 404 || response.status >= 500){ lastStatus = response.status; response = null; continue; }
+        }catch(fetchErr){
+          if(fetchErr.name === 'AbortError'){
+            clearTimeout(timeoutId);
+            throw new Error('Сервер не ответил вовремя (таймаут ' + (REQUEST_TIMEOUT_MS/1000) + ' сек). Проверь соединение и попробуй ещё раз.');
+          }
+          lastNetErr = fetchErr; response = null; continue;
         }
-        throw new Error('Нет соединения с сервером. Проверь интернет и попробуй ещё раз.');
+        break;
+      }
+      if(!response){
+        clearTimeout(timeoutId);
+        if(lastNetErr){ throw new Error('Нет соединения с сервером. Проверь интернет и попробуй ещё раз.'); }
+        if(lastStatus === 429){ throw new Error('Дневной бесплатный лимит исчерпан. Обновится утром около 05:00 — возвращайся! 🌙'); }
+        throw new Error('Модели заняты. Попробуй ещё раз через минуту.');
       }
 
       if(response.status === 401){
@@ -3893,12 +3908,26 @@ function wmThinkStart(bubble){
         max_tokens: 2500,
         reasoning: { enabled: false }
       };
-      const response = await fetch(OPENROUTER_CHAT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENROUTER_KEY },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
+      let response = null;
+      for(var MDLi = 0; MDLi < CHAT_MODELS.length; MDLi++){
+        try{
+          payload.model = CHAT_MODELS[MDLi];
+          response = await fetch(OPENROUTER_CHAT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENROUTER_KEY },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          if(response.status === 429 || response.status === 404 || response.status >= 500){ response = null; continue; }
+        }catch(eM2){ response = null; continue; }
+        break;
+      }
+      if(!response){
+        clearTimeout(timeoutId);
+        pendingEl.remove();
+        addMessage('error', '🌐 Модели заняты или лимит исчерпан. Попробуй ещё раз через минуту.');
+        return;
+      }
       if(!response.ok){
         clearTimeout(timeoutId);
         pendingEl.remove();
