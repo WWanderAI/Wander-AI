@@ -162,7 +162,7 @@ return chain(0);
     font-size:11px;font-weight:700;letter-spacing:.4px;cursor:pointer;
   }
   #planChip.pro{background:var(--amber);color:#171B26;}
-  .shop-pro-card{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+  .shop-pro-card{display:flex;flex-direction:column;gap:10px;}
   .shop-pro-name{font-size:20px;font-weight:800;color:var(--amber);}
   .shop-pro-desc{font-size:13.5px;line-height:1.55;color:var(--text);}
   .shop-pro-price{font-size:26px;font-weight:800;}
@@ -170,6 +170,33 @@ return chain(0);
   .shop-pro-list{margin:2px 0 6px;padding-left:18px;font-size:13.5px;color:var(--text);}
   .shop-note{font-size:12.5px;color:var(--amber);min-height:16px;}
   .shop-pay-methods{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
+  /* магазин — на весь экран */
+  #shopModalOverlay{
+    background:var(--bg);
+    z-index:130;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    padding:0;
+  }
+  #shopModalOverlay .account-modal{
+    max-width:none;width:100%;max-height:none;height:100%;
+    background:var(--bg);border:none;border-radius:0;padding:0;
+    display:flex;flex-direction:column;overflow-y:auto;
+  }
+  #shopModalOverlay .account-modal-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px;border-bottom:1px solid var(--line);border-radius:0;flex-shrink:0;
+  }
+  #shopModalOverlay .account-modal-title{font-size:26px;}
+  #closeShopModal{
+    background:transparent;border:none;color:var(--text-dim);
+    font-size:22px;cursor:pointer;padding:4px 10px;
+  }
+  #closeShopModal:hover{color:var(--amber);}
+  #shopModalOverlay .shop-pro-card{
+    flex:1;justify-content:center;max-width:440px;width:100%;
+    margin:0 auto;padding:26px 24px 34px;
 
   /* панель чатов */
   .drawer-overlay{
