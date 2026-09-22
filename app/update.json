@@ -1,6 +1,6 @@
 {
-  "versionCode": 71,
-  "versionName": "1.70",
-  "apkUrl": "https://cdn.jsdelivr.net/gh/wwanderai/Wander-AI@main/app/WandexAI-v1.70.apk",
-  "notes": "Что нового:\n• Исправлен отклонённый запрос: приложение теперь всегда использует рабочий ключ\n• Обновления теперь скачиваются с быстрого зеркала"
+  "versionCode": 72,
+  "versionName": "1.71",
+  "apkUrl": "https://wwanderai.github.io/Wander-AI/app/WandexAI-v1.71.apk",
+  "notes": "Что нового:\n• Повысили безопасность: убрали лишнее системное разрешение\n• Обновление открывается в браузере — скачайте APK и запустите его\n• Если приложение установлено из RuStore — обновляйтесь в RuStore"
 }
