@@ -197,6 +197,7 @@ return chain(0);
   #shopModalOverlay .shop-pro-card{
     flex:1;justify-content:center;max-width:440px;width:100%;
     margin:0 auto;padding:26px 24px 34px;
+  }
 
   /* панель чатов */
   .drawer-overlay{
@@ -4862,6 +4863,19 @@ function wmThinkStart(bubble){
 </script>
 
 <script>
+(function(){
+  try{
+    var probe = document.createElement('div');
+    probe.className = 'account-modal-overlay';
+    document.body.appendChild(probe);
+    var ok = getComputedStyle(probe).display === 'flex';
+    document.body.removeChild(probe);
+    if(!ok && !sessionStorage.getItem('cssHeal')){
+      sessionStorage.setItem('cssHeal', '1');
+      location.reload();
+    }
+  }catch(e){}
+})();
 (function(){
   var API = 'https://hazy-hamster-7342.wandexai.deno.net';
   var chip = document.getElementById('planChip');
