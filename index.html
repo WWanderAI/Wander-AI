@@ -156,6 +156,20 @@ return chain(0);
   }
   #openChats:hover, #openSettings:hover{color:var(--amber);border-color:var(--amber);}
   #openChats svg, #openSettings svg{width:15px;height:15px;}
+  #planChip{
+    flex-shrink:0;height:24px;padding:0 10px;border-radius:12px;
+    border:1px solid var(--amber);background:transparent;color:var(--amber);
+    font-size:11px;font-weight:700;letter-spacing:.4px;cursor:pointer;
+  }
+  #planChip.pro{background:var(--amber);color:#171B26;}
+  .shop-pro-card{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+  .shop-pro-name{font-size:20px;font-weight:800;color:var(--amber);}
+  .shop-pro-desc{font-size:13.5px;line-height:1.55;color:var(--text);}
+  .shop-pro-price{font-size:26px;font-weight:800;}
+  .shop-pro-price span{font-size:12px;font-weight:400;color:var(--text-dim);}
+  .shop-pro-list{margin:2px 0 6px;padding-left:18px;font-size:13.5px;color:var(--text);}
+  .shop-note{font-size:12.5px;color:var(--amber);min-height:16px;}
+  .shop-pay-methods{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
 
   /* панель чатов */
   .drawer-overlay{
@@ -1558,6 +1572,7 @@ return chain(0);
     <div>
       <div class="brand-name">Wandex AI</div>
     </div>
+    <button id="planChip" type="button" title="Магазин">FREE</button>
     <button id="openSettings" aria-label="Настройки" title="Настройки">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
@@ -1709,6 +1724,28 @@ return chain(0);
       </div>
 
       <button id="signOutBtn" type="button">Выйти из аккаунта</button>
+    </div>
+  </div>
+
+  <div class="account-modal-overlay hide" id="shopModalOverlay">
+    <div class="account-modal">
+      <div class="account-modal-header">
+        <div class="account-modal-title">Магазин</div>
+        <button id="closeShopModal" type="button">✕</button>
+      </div>
+      <div class="shop-pro-card">
+        <div class="shop-pro-name">Wandex PRO</div>
+        <div class="shop-pro-desc">Все функции Wandex бесплатны и останутся бесплатными. PRO — это способ поддержать проект: бейдж и особый статус у тебя в профиле.</div>
+        <div class="shop-pro-price">1 ₽ <span>акционная цена навсегда</span></div>
+        <ul class="shop-pro-list">
+          <li>PRO-бейдж в шапке приложения</li>
+          <li>Статус «Поддержал проект»</li>
+          <li>Ранний доступ к новым возможностям</li>
+        </ul>
+        <button id="buyProBtn" class="auth-submit-btn" type="button">Купить за 1 ₽</button>
+        <div id="shopNote" class="shop-note"></div>
+        <div class="shop-pay-methods">Оплата: СБП или банковская карта · вопросы и возврат — wandexaisupport@gmail.com</div>
+      </div>
     </div>
   </div>
 
@@ -4781,11 +4818,15 @@ function wmThinkStart(bubble){
       }
 
       window.startWandexApp(user.uid, remoteData);
+      window.__wandexUid = user.uid; window.__wandexEmail = user.email || '';
+      if(window.__shopRefresh) window.__shopRefresh();
     }else{
       authLoading.style.display = 'none';
       authCard.style.display = '';
       authOverlay.classList.remove('hide');
       window.stopWandexApp();
+      window.__wandexUid = null; window.__wandexEmail = '';
+      if(window.__shopRefresh) window.__shopRefresh();
       emailInput.value = '';
       passInput.value = '';
       errorEl.textContent = '';
@@ -4793,5 +4834,50 @@ function wmThinkStart(bubble){
   });
 </script>
 
+<script>
+(function(){
+  var API = 'https://hazy-hamster-7342.wandexai.deno.net';
+  var chip = document.getElementById('planChip');
+  var ov = document.getElementById('shopModalOverlay');
+  var buy = document.getElementById('buyProBtn');
+  var note = document.getElementById('shopNote');
+  function uid(){ return window.__wandexUid || null; }
+  function email(){ return window.__wandexEmail || ''; }
+  function openShop(){ ov.classList.remove('hide'); note.textContent=''; }
+  chip.addEventListener('click', openShop);
+  document.getElementById('closeShopModal').addEventListener('click', function(){ ov.classList.add('hide'); });
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.classList.add('hide'); });
+  window.__shopRefresh = function(){
+    var u = uid();
+    if(!u){ chip.textContent = 'FREE'; chip.classList.remove('pro'); return; }
+    fetch(API + '/shop/status?uid=' + encodeURIComponent(u)).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if(j && j.pro){ chip.textContent = 'PRO'; chip.classList.add('pro');
+        buy.textContent = 'PRO активен — спасибо!'; buy.disabled = true;
+      } else { chip.textContent = 'FREE'; chip.classList.remove('pro');
+        buy.textContent = 'Купить за ' + ((j && j.price) || 1) + ' ₽'; buy.disabled = false;
+      }
+    }).catch(function(){ chip.textContent = 'FREE'; });
+  };
+  buy.addEventListener('click', function(){
+    var u = uid();
+    if(!u){ note.textContent = 'Сначала войди в аккаунт — тогда PRO закрепится за тобой (меню ≡ → Аккаунт).'; return; }
+    buy.disabled = true; note.textContent = 'Создаю платёж…';
+    fetch(API + '/shop/create', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ uid: u, email: email() }) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(j.payUrl){ window.location.href = j.payUrl; }
+      else if(j.alreadyPro){ note.textContent = 'PRO уже активен.'; window.__shopRefresh(); }
+      else { note.textContent = 'Платёж временно недоступен — попробуй позже.'; buy.disabled = false; }
+    })
+    .catch(function(){ note.textContent = 'Нет связи с магазином — проверь интернет.'; buy.disabled = false; });
+  });
+  if(location.hash.indexOf('pro=1') !== -1){
+    setTimeout(window.__shopRefresh, 1500);
+    setTimeout(window.__shopRefresh, 4000);
+  }
+  window.__shopRefresh();
+})();
+</script>
 </body>
 </html>
