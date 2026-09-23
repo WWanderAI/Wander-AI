@@ -170,6 +170,15 @@ return chain(0);
   .shop-pro-list{margin:2px 0 6px;padding-left:18px;font-size:13.5px;color:var(--text);}
   .shop-note{font-size:12.5px;color:var(--amber);min-height:16px;}
   .shop-pay-methods{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
+  .shop-steps{display:flex;flex-direction:column;gap:8px;text-align:left;
+    background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;padding:12px;}
+  .shop-steps-title{font-weight:700;font-size:13.5px;}
+  .shop-step{font-size:13.5px;line-height:1.5;}
+  .shop-copy{color:var(--amber);font-weight:600;}
+  .shop-mini{background:transparent;border:1px solid var(--line);color:var(--text-dim);
+    border-radius:8px;padding:2px 8px;font-size:11.5px;cursor:pointer;margin-left:4px;}
+  .shop-mini:hover{color:var(--amber);border-color:var(--amber);}
+  .shop-hint{font-size:12px;color:var(--text-dim);margin-top:4px;}
   /* магазин — на весь экран */
   #shopModalOverlay{
     background:var(--bg);
@@ -4849,15 +4858,32 @@ function wmThinkStart(bubble){
       <div class="shop-pro-card">
         <div class="shop-pro-name">Wandex PRO</div>
         <div class="shop-pro-desc">Все функции Wandex бесплатны и останутся бесплатными. PRO — это способ поддержать проект: бейдж и особый статус у тебя в профиле.</div>
-        <div class="shop-pro-price">1 ₽ <span>акционная цена навсегда</span></div>
+        <div class="shop-pro-price">1 ₽ <span>разово · навсегда</span></div>
         <ul class="shop-pro-list">
           <li>PRO-бейдж в шапке приложения</li>
           <li>Статус «Поддержал проект»</li>
           <li>Ранний доступ к новым возможностям</li>
         </ul>
-        <button id="buyProBtn" class="auth-submit-btn" type="button">Купить за 1 ₽</button>
+        <div id="paySteps" class="shop-steps" style="display:none">
+          <div class="shop-steps-title">Как оплатить — 2 минуты:</div>
+          <div class="shop-step"><b>1.</b> Переведи <b>1 ₽</b> на карту
+            <span class="shop-copy" id="cardCopy">2200 77•• •••• ••••</span>
+            <button class="shop-mini" id="copyCard" type="button">копировать</button>
+          </div>
+          <div class="shop-step"><b>2.</b> Отправь код платежа на почту
+            <span class="shop-copy">wandexaisupport@gmail.com</span>
+            <button class="shop-mini" id="mailBtn" type="button">написать</button>
+          </div>
+          <div class="shop-step" id="codeStep"><b>3.</b> Твой код:
+            <b class="shop-copy" id="payCode">—</b>
+            <button class="shop-mini" id="copyCode" type="button">копировать</button>
+          </div>
+          <div class="shop-hint">PRO включу, как только увижу перевод (обычно быстро).
+          Письмо не обязательно, но так — быстрее.</div>
+        </div>
+        <button id="buyProBtn" class="auth-submit-btn" type="button">Оплатить 1 ₽</button>
         <div id="shopNote" class="shop-note"></div>
-        <div class="shop-pay-methods">Оплата: СБП или банковская карта · вопросы и возврат — wandexaisupport@gmail.com</div>
+        <div class="shop-pay-methods">Переводом на карту · вопросы и возврат — wandexaisupport@gmail.com</div>
       </div>
     </div>
   </div>
@@ -4957,19 +4983,39 @@ function wmThinkStart(bubble){
       }
     }).catch(function(){ chip.textContent = 'FREE'; });
   };
+  var CODE = null;
+  function mkCode(u){
+    var s = ''; var alphabet = 'ACDEFGHJKLMNPQRSTUVWXYZ23456789';
+    for(var i=0;i<4;i++){ s += alphabet[Math.floor(Math.random()*alphabet.length)]; }
+    return 'WDX-' + s;
+  }
+  var steps = document.getElementById('paySteps');
   buy.addEventListener('click', function(){
     var u = uid();
     if(!u){ note.textContent = 'Сначала войди в аккаунт — тогда PRO закрепится за тобой (меню ≡ → Аккаунт).'; return; }
-    buy.disabled = true; note.textContent = 'Создаю платёж…';
+    if(steps.style.display === 'block'){ note.textContent = 'Жду перевод — PRO включу сразу, как увижу. Код: ' + CODE; return; }
+    CODE = mkCode(u);
+    document.getElementById('payCode').textContent = CODE + ' (' + email() + ')';
+    steps.style.display = 'block';
+    buy.textContent = 'Я оплатил — жду активации';
+    note.textContent = '';
     fetch(API + '/shop/create', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ uid: u, email: email() }) })
-    .then(function(r){ return r.json(); })
-    .then(function(j){
-      if(j.payUrl){ window.location.href = j.payUrl; }
-      else if(j.alreadyPro){ note.textContent = 'PRO уже активен.'; window.__shopRefresh(); }
-      else { note.textContent = 'Платёж временно недоступен — попробуй позже.'; buy.disabled = false; }
-    })
-    .catch(function(){ note.textContent = 'Нет связи с магазином — проверь интернет.'; buy.disabled = false; });
+      body: JSON.stringify({ uid: u, email: email() }) }).catch(function(){});
+  });
+  document.getElementById('copyCard').addEventListener('click', function(){
+    var t = document.getElementById('cardCopy').textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){}, function(){});
+    this.textContent = '✓'; var b=this; setTimeout(function(){ b.textContent='копировать'; }, 1500);
+  });
+  document.getElementById('copyCode').addEventListener('click', function(){
+    var t = document.getElementById('payCode').textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){}, function(){});
+    this.textContent = '✓'; var b=this; setTimeout(function(){ b.textContent='копировать'; }, 1500);
+  });
+  document.getElementById('mailBtn').addEventListener('click', function(){
+    var u = uid();
+    var body = encodeURIComponent('Привет! Оплатил(а) 1 ₽ за Wandex PRO.\nКод: ' + (CODE||'—') + '\nАккаунт: ' + (email()||'—') + '\nUID: ' + (u||'—') + '\nДата перевода: ');
+    window.location.href = 'mailto:wandexaisupport@gmail.com?subject=' + encodeURIComponent('Wandex PRO — ' + (CODE||'')) + '&body=' + body;
   });
   if(location.hash.indexOf('pro=1') !== -1){
     setTimeout(window.__shopRefresh, 1500);
