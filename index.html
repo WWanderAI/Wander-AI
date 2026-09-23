@@ -4881,6 +4881,7 @@ function wmThinkStart(bubble){
             <button class="shop-mini" id="mailBtn" type="button">написать</button>
           </div>
           <div class="shop-hint">Код в сообщении к переводу — обязателен: по нему оплата находится автоматически.
+          Дефис можно опустить (WDXZXDG тоже найдётся) — некоторые банки его запрещают.
           Почта для связи: <span class="shop-copy">wandexaisupport@gmail.com</span></div>
         </div>
         <button id="buyProBtn" class="auth-submit-btn" type="button">Оплатить 1 ₽</button>
@@ -4985,7 +4986,7 @@ function wmThinkStart(bubble){
       }
     }).catch(function(){ chip.textContent = 'FREE'; });
   };
-  var pollTimer = null; /* v43-auto-notify */
+  var pollTimer = null; /* v43.1-nohyphen */
   function startPoll(u){
     try{ if(pollTimer) clearInterval(pollTimer); }catch(e){}
     var wait = document.getElementById('payWait'); if(wait) wait.style.display = 'inline';
@@ -5010,11 +5011,11 @@ function wmThinkStart(bubble){
   function mkCode(u){
     try{
       var old = localStorage.getItem('wandexPayCode');
-      if(old && /^WDX-[A-Z0-9]{4}$/.test(old)) return old;
+      if(old && /^WDX-?[A-Z0-9]{4}$/.test(old)) return old;
     }catch(e){}
     var s = ''; var alphabet = 'ACDEFGHJKLMNPQRSTUVWXYZ23456789';
     for(var i=0;i<4;i++){ s += alphabet[Math.floor(Math.random()*alphabet.length)]; }
-    var c = 'WDX-' + s;
+    var c = 'WDX' + s;
     try{ localStorage.setItem('wandexPayCode', c); }catch(e){}
     return c;
   }
