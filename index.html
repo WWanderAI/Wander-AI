@@ -4863,6 +4863,64 @@ function wmThinkStart(bubble){
   </div>
 
 <script>
+/* Пул ключей: у каждого пользователя — СВОЙ ключ из app/keys.json (персонально,
+   стабильно по ID установки), при дневном лимите — авто-переход на следующий.
+   Работает и в браузере (openrouter.ai), и в приложении (релей deno.net/workers.dev). */
+(function(){
+  try{
+    var ID = 'wandexPoolId';
+    var pid = localStorage.getItem(ID);
+    if(!pid){ pid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(ID, pid); }
+    fetch('https://wwanderai.github.io/Wander-AI/app/keys.json', {cache:'no-cache'})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){
+      if(!j || !j.k || !j.k.length) return;
+      var keys = [];
+      for(var i=0;i<j.k.length;i++){ try{ var d = atob(j.k[i]); if(d) keys.push(d); }catch(e){} }
+      if(!keys.length) return;
+      if(window.__wandexKeys === undefined || !(window.__wandexKeys && window.__wandexKeys.length)){
+        var h = 0; for(var q=0;q<pid.length;q++){ h = (h*31 + pid.charCodeAt(q)) >>> 0; }
+        if(window.__wandexKeyIdx === undefined) window.__wandexKeyIdx = h % keys.length;
+        window.__wandexKeys = keys;
+      }
+      if(window.__wandexKeyPatchedWeb) return;
+      window.__wandexKeyPatchedWeb = true;
+      var __kof = window.fetch;
+      window.fetch = function(u, o){
+        var url = (typeof u === 'string') ? u : ((u && u.url) || '');
+        var isOR = String(url).indexOf('openrouter.ai') >= 0
+                || String(url).indexOf('wandexai.deno.net') >= 0
+                || String(url).indexOf('workers.dev') >= 0;
+        var K = window.__wandexKeys;
+        if(!isOR || !K || !K.length) return __kof.apply(window, arguments);
+        var idx = (window.__wandexKeyIdx || 0) % K.length;
+        var init2 = Object.assign({}, o || {});
+        init2.headers = Object.assign({}, (o && o.headers) || {});
+        init2.headers['Authorization'] = 'Bearer ' + K[idx];
+        var tries = K.length - 1;
+        function chain(p){
+          return p.then(function(res){
+            if(res.status !== 429 || tries <= 0) return res;
+            return res.clone().json().then(function(j2){
+              var e = (j2 && j2.error) || {};
+              var msg = String(e.message || '') + ' ' + String((e.metadata && e.metadata.limit_source) || '');
+              if(msg.indexOf('free-models-per-day') < 0 && msg.indexOf('daily') < 0) return res;
+              window.__wandexKeyIdx = ((window.__wandexKeyIdx || 0) + 1) % K.length;
+              tries = tries - 1;
+              var i3 = Object.assign({}, init2);
+              i3.headers = Object.assign({}, init2.headers);
+              i3.headers['Authorization'] = 'Bearer ' + K[(window.__wandexKeyIdx || 0) % K.length];
+              return chain(__kof.call(window, u, i3));
+            }).catch(function(){ return res; });
+          });
+        }
+        return chain(__kof.call(window, u, init2));
+      };
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
+<script>
 (function(){
   try{
     var probe = document.createElement('div');
