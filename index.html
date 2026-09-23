@@ -4867,19 +4867,21 @@ function wmThinkStart(bubble){
         <div id="paySteps" class="shop-steps" style="display:none">
           <div class="shop-steps-title">Как оплатить — 2 минуты:</div>
           <div class="shop-step"><b>1.</b> Переведи <b>1 ₽</b> на карту
-            <span class="shop-copy" id="cardCopy">2200 77•• •••• ••••</span>
+            <span class="shop-copy" id="cardCopy" data-full="2202206119856172">2202 20•• •••• 6172</span>
             <button class="shop-mini" id="copyCard" type="button">копировать</button>
           </div>
-          <div class="shop-step"><b>2.</b> Отправь код платежа на почту
-            <span class="shop-copy">wandexaisupport@gmail.com</span>
-            <button class="shop-mini" id="mailBtn" type="button">написать</button>
-          </div>
-          <div class="shop-step" id="codeStep"><b>3.</b> Твой код:
+          <div class="shop-step" id="codeStep"><b>2.</b> В <b>сообщении к переводу</b> укажи код (обязательно!):
             <b class="shop-copy" id="payCode">—</b>
             <button class="shop-mini" id="copyCode" type="button">копировать</button>
           </div>
-          <div class="shop-hint">PRO включу, как только увижу перевод (обычно быстро).
-          Письмо не обязательно, но так — быстрее.</div>
+          <div class="shop-step"><b>3.</b> PRO включится сам через ~10 секунд — не закрывай это окно.
+            <span id="payWait" style="display:none;color:#E3A542;font-weight:700">⏳ жду перевод…</span>
+          </div>
+          <div class="shop-step"><b>4.</b> Не сработало? Напиши нам:
+            <button class="shop-mini" id="mailBtn" type="button">написать</button>
+          </div>
+          <div class="shop-hint">Код в сообщении к переводу — обязателен: по нему оплата находится автоматически.
+          Почта для связи: <span class="shop-copy">wandexaisupport@gmail.com</span></div>
         </div>
         <button id="buyProBtn" class="auth-submit-btn" type="button">Оплатить 1 ₽</button>
         <div id="shopNote" class="shop-note"></div>
@@ -4983,33 +4985,79 @@ function wmThinkStart(bubble){
       }
     }).catch(function(){ chip.textContent = 'FREE'; });
   };
+  var pollTimer = null; /* v43-auto-notify */
+  function startPoll(u){
+    try{ if(pollTimer) clearInterval(pollTimer); }catch(e){}
+    var wait = document.getElementById('payWait'); if(wait) wait.style.display = 'inline';
+    var n = 0;
+    pollTimer = setInterval(function(){
+      n++;
+      fetch(API + '/shop/status?uid=' + encodeURIComponent(u)).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+        if(j && j.pro){
+          try{ clearInterval(pollTimer); pollTimer = null; }catch(e){}
+          if(wait) wait.style.display = 'none';
+          window.__shopRefresh();
+          note.textContent = '🎉 Оплата найдена! PRO активен — спасибо за поддержку!';
+        } else if(n >= 60){
+          try{ clearInterval(pollTimer); pollTimer = null; }catch(e){}
+          if(wait) wait.style.display = 'none';
+          note.textContent = 'Пока не вижу перевод. Проверь: 1 ₽ + код ' + CODE + ' в сообщении к переводу. Не получается — жми «написать».';
+        }
+      }).catch(function(){ if(n >= 60){ try{ clearInterval(pollTimer); pollTimer = null; }catch(e){} } });
+    }, 3000);
+  }
   var CODE = null;
   function mkCode(u){
+    try{
+      var old = localStorage.getItem('wandexPayCode');
+      if(old && /^WDX-[A-Z0-9]{4}$/.test(old)) return old;
+    }catch(e){}
     var s = ''; var alphabet = 'ACDEFGHJKLMNPQRSTUVWXYZ23456789';
     for(var i=0;i<4;i++){ s += alphabet[Math.floor(Math.random()*alphabet.length)]; }
-    return 'WDX-' + s;
+    var c = 'WDX-' + s;
+    try{ localStorage.setItem('wandexPayCode', c); }catch(e){}
+    return c;
   }
   var steps = document.getElementById('paySteps');
   buy.addEventListener('click', function(){
     var u = uid();
     if(!u){ note.textContent = 'Сначала войди в аккаунт — тогда PRO закрепится за тобой (меню ≡ → Аккаунт).'; return; }
-    if(steps.style.display === 'block'){ note.textContent = 'Жду перевод — PRO включу сразу, как увижу. Код: ' + CODE; return; }
+    if(steps.style.display === 'block'){ note.textContent = 'Жду перевод 1 ₽ с кодом ' + CODE + ' в сообщении — PRO включится сам. Не закрывай окно.'; startPoll(u); return; }
     CODE = mkCode(u);
-    document.getElementById('payCode').textContent = CODE + ' (' + email() + ')';
+    document.getElementById('payCode').textContent = CODE;
     steps.style.display = 'block';
-    buy.textContent = 'Я оплатил — жду активации';
+    buy.textContent = '⏳ Жду перевод — PRO включится сам';
     note.textContent = '';
     fetch(API + '/shop/create', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ uid: u, email: email() }) }).catch(function(){});
+      body: JSON.stringify({ uid: u, email: email(), code: CODE }) }).catch(function(){});
+    startPoll(u);
   });
   document.getElementById('copyCard').addEventListener('click', function(){
-    var t = document.getElementById('cardCopy').textContent;
+    var el = document.getElementById('cardCopy');
+    var t = el.getAttribute('data-full') || el.textContent;
     (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){}, function(){});
     this.textContent = '✓'; var b=this; setTimeout(function(){ b.textContent='копировать'; }, 1500);
   });
   document.getElementById('copyCode').addEventListener('click', function(){
     var t = document.getElementById('payCode').textContent;
     (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){}, function(){});
+    this.textContent = '✓'; var b=this; setTimeout(function(){ b.textContent='копировать'; }, 1500);
+  });
+  document.getElementById('mailBtn').addEventListener('click', function(){
+    var u = uid();
+    var body = encodeURIComponent('Привет! Оплатил(а) 1 ₽ за Wandex PRO.\nКод: ' + (CODE||'—') + '\nАккаунт: ' + (email()||'—') + '\nUID: ' + (u||'—') + '\nДата перевода: ');
+    window.location.href = 'mailto:wandexaisupport@gmail.com?subject=' + encodeURIComponent('Wandex PRO — ' + (CODE||'')) + '&body=' + body;
+  });
+  if(location.hash.indexOf('pro=1') !== -1){
+    setTimeout(window.__shopRefresh, 1500);
+    setTimeout(window.__shopRefresh, 4000);
+  }
+  window.__shopRefresh();
+})();
+</script>
+</body>
+</html>
+.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){}, function(){});
     this.textContent = '✓'; var b=this; setTimeout(function(){ b.textContent='копировать'; }, 1500);
   });
   document.getElementById('mailBtn').addEventListener('click', function(){
