@@ -1637,10 +1637,7 @@ return chain(0);
       <button class="mode-btn active" data-mode="scout">Скаут: быстро</button>
       <button class="mode-btn" data-mode="pathfinder">Следопыт: сбалансированно</button>
       <button class="mode-btn" data-mode="navigator">Штурман: глубоко</button>
-      <!-- Режим "Видео" временно скрыт — нужен платный баланс Pollen для генерации.
-           Чтобы вернуть: раскомментируй строку ниже.
-      <button class="mode-btn" data-mode="video">Видео: клип</button>
-      -->
+      <button class="mode-btn" id="videoModeBtn" data-mode="video">🔒 Видео: клип · PRO</button>
     </div>
   </div>
 </header>
@@ -3310,6 +3307,7 @@ return chain(0);
   modeRow.addEventListener('click', (e) => {
     const btn = e.target.closest('.mode-btn');
     if(!btn) return;
+    if(btn.dataset.mode === 'video' && window.__isPro !== true){ closeModeDropdown(); if(window.__openShop) window.__openShop(); return; } /* v45-video-lock */
     modeRow.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentMode = btn.dataset.mode;
@@ -3773,6 +3771,7 @@ function wmThinkStart(bubble){
     const mode = MODES[currentMode];
 
     if(mode.isVideoMode){
+      if(window.__isPro !== true){ if(window.__openShop) window.__openShop(); return; }
       if(!text){ return; } // для видео нужен текстовый промпт
       const userDiv = addMessage('user', text, {});
       history.push({ role: 'user', content: [{ type: 'text', text: text }] });
@@ -4972,19 +4971,27 @@ function wmThinkStart(bubble){
   function uid(){ return window.__wandexUid || null; }
   function email(){ return window.__wandexEmail || ''; }
   function openShop(){ ov.classList.remove('hide'); note.textContent=''; }
+  window.__openShop = openShop;
   chip.addEventListener('click', openShop);
   document.getElementById('closeShopModal').addEventListener('click', function(){ ov.classList.add('hide'); });
   ov.addEventListener('click', function(e){ if(e.target === ov) ov.classList.add('hide'); });
+  window.__isPro = false;
+  function videoLock(pro){
+    var vb = document.getElementById('videoModeBtn');
+    if(vb) vb.textContent = pro ? '🎬 Видео: клип' : '🔒 Видео: клип · PRO';
+  }
   window.__shopRefresh = function(){
     var u = uid();
-    if(!u){ chip.textContent = 'FREE'; chip.classList.remove('pro'); return; }
+    if(!u){ chip.textContent = 'FREE'; chip.classList.remove('pro'); window.__isPro = false; videoLock(false); return; }
     fetch(API + '/shop/status?uid=' + encodeURIComponent(u)).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
       if(j && j.pro){ chip.textContent = 'PRO'; chip.classList.add('pro');
         buy.textContent = 'PRO активен — спасибо!'; buy.disabled = true;
+        window.__isPro = true; videoLock(true);
       } else { chip.textContent = 'FREE'; chip.classList.remove('pro');
         buy.textContent = 'Купить за ' + ((j && j.price) || 1) + ' ₽'; buy.disabled = false;
+        window.__isPro = false; videoLock(false);
       }
-    }).catch(function(){ chip.textContent = 'FREE'; });
+    }).catch(function(){ chip.textContent = 'FREE'; window.__isPro = false; videoLock(false); });
   };
   var pollTimer = null; /* v44-pay */
   function startPoll(u){
