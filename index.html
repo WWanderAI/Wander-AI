@@ -5029,9 +5029,16 @@ function wmThinkStart(bubble){
       if(j && (j.ok || j.pro)){ window.__shopRefresh(); note.textContent = '🎉 PRO активен — бесплатно на время запуска!'; return; }
       return fetch(API + '/shop/create', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ uid: u, email: email() }) }).then(function(r2){ return r2.ok ? r2.json() : null; }).then(function(j2){
-        if(!j2 || !j2.pid) throw 0;
-        return fetch(API + '/shop/mock-confirm?pid=' + encodeURIComponent(j2.pid));
-      }).then(function(){ window.__shopRefresh(); note.textContent = '🎉 PRO активен — бесплатно на время запуска!'; });
+        if(!j2 || (!j2.pid && !j2.alreadyPro)) throw 0;
+        if(!j2.pid) return null;
+        return fetch(API + '/shop/mock-confirm?pid=' + encodeURIComponent(j2.pid)).then(function(){ return null; }, function(){ return null; });
+      }).then(function(){ return fetch(API + '/shop/status?uid=' + encodeURIComponent(u)); })
+      .then(function(r3){ return r3.ok ? r3.json() : null; })
+      .then(function(st){
+        window.__shopRefresh();
+        if(st && st.pro){ note.textContent = '🎉 PRO активен — бесплатно на время запуска!'; }
+        else { buy.disabled = false; buy.textContent = 'Получить PRO · 0 ₽'; note.textContent = 'Не получилось связаться с сервером. Попробуй ещё раз.'; }
+      });
     }).catch(function(){
       buy.disabled = false; buy.textContent = 'Получить PRO · 0 ₽';
       note.textContent = 'Не получилось связаться с сервером. Попробуй ещё раз.';
