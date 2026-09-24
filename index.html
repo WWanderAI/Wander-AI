@@ -4207,6 +4207,60 @@ function wmThinkStart(bubble){
     }
   }
 
+  // Экспресс-клип: оживление картинки (Ken Burns) + запись в webm. 100% бесплатно,
+  // работает прямо в браузере, без серверов генерации видео.
+  function kenBurnsClip(objUrl, seconds, signal){
+    return new Promise(function(resolve, reject){
+      const img = new Image();
+      img.onload = function(){
+        try{
+          const W = 1280, H = 720;
+          const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+          const cx = cv.getContext('2d');
+          const s = Math.max(W / img.width, H / img.height);
+          const dw = img.width * s, dh = img.height * s;
+          if(!window.MediaRecorder || !cv.captureStream){ reject(new Error('Этот браузер не умеет записывать видео.')); return; }
+          let mime = '';
+          if(MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mime = 'video/webm;codecs=vp9';
+          else if(MediaRecorder.isTypeSupported('video/webm')) mime = 'video/webm';
+          const stream = cv.captureStream(30);
+          const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 2500000 } : undefined);
+          const chunks = [];
+          let done = false;
+          function finish(ok, val){
+            if(done) return; done = true;
+            try{ if(rec.state !== 'inactive') rec.stop(); }catch(e){}
+            URL.revokeObjectURL(objUrl);
+            if(ok) resolve(val); else reject(val);
+          }
+          rec.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+          rec.onstop = function(){
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            if(!blob.size){ finish(false, new Error('Не получилось собрать видео. Попробуй ещё раз.')); return; }
+            finish(true, URL.createObjectURL(blob));
+          };
+          const t0 = performance.now(), dur = seconds * 1000;
+          function frame(now){
+            if(signal && signal.aborted){ finish(false, new Error('Остановлено.')); return; }
+            const p = Math.min(1, (now - t0) / dur);
+            const z = 1 + 0.12 * p;
+            const w = dw * z, hgt = dh * z;
+            const x = (W - w) / 2 + (p - 0.5) * 40, y = (H - hgt) / 2;
+            cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+            cx.drawImage(img, x, y, w, hgt);
+            if(p < 1) requestAnimationFrame(frame);
+            else { try{ rec.stop(); }catch(e){ finish(false, new Error('Не получилось собрать видео.')); } }
+          }
+          rec.start();
+          requestAnimationFrame(frame);
+          setTimeout(function(){ if(rec.state !== 'inactive'){ try{ rec.stop(); }catch(e){} } }, dur + 5000);
+        }catch(err){ reject(err); }
+      };
+      img.onerror = function(){ reject(new Error('Не удалось загрузить нарисованный кадр.')); };
+      img.src = objUrl;
+    });
+  }
+
   async function runVideoGeneration(pendingEl, prompt){
     setGenerating(true);
     manualStop = false;
@@ -4216,6 +4270,30 @@ function wmThinkStart(bubble){
     const timeoutId = setTimeout(() => controller.abort(), VIDEO_TIMEOUT_MS);
 
     try{
+      const VIDEO_ENGINE = 'express'; /* v46-free-video: express = бесплатный Ken Burns, veo = платный Pollinations */
+      let videoUrl = null;
+      function setPending(x){ try{ const el = pendingEl.querySelector('.msg-text'); if(el) el.textContent = x; }catch(e){} }
+      if(VIDEO_ENGINE === 'express'){
+        setPending('Рисую кадр… (бесплатно, ~30 сек)');
+        const eng = await translatePromptToEnglish(prompt);
+        const seed = Math.floor(Math.random() * 1000000);
+        const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(eng + ', cinematic wide shot, highly detailed, beautiful lighting')
+          + '?width=1280&height=720&model=flux&nologo=true&seed=' + seed;
+        let imgResp;
+        try{ imgResp = await fetch(imgUrl, { signal: controller.signal }); }
+        catch(fe){
+          if(fe.name === 'AbortError' && manualStop){ pendingEl.remove(); return; }
+          if(fe.name === 'AbortError'){ throw new Error('Генерация заняла слишком много времени. Попробуй ещё раз.'); }
+          throw new Error('Нет соединения с сервером. Проверь интернет и попробуй ещё раз.');
+        }
+        if(!imgResp.ok) throw new Error('Не удалось нарисовать кадр (ошибка ' + imgResp.status + '). Попробуй ещё раз.');
+        const imgBlob = await imgResp.blob();
+        if(!imgBlob.type.startsWith('image/')) throw new Error('Сервер вернул не картинку. Попробуй ещё раз.');
+        const imgObj = URL.createObjectURL(imgBlob);
+        setPending('Оживляю кадр…');
+        videoUrl = await kenBurnsClip(imgObj, 6, controller.signal);
+        setPending('Собираю видео…');
+      } else {
       const url = 'https://gen.pollinations.ai/image/' + encodeURIComponent(prompt)
         + '?model=veo&width=1280&height=720&duration=6&key=' + encodeURIComponent(POLLINATIONS_KEY);
 
@@ -4249,7 +4327,8 @@ function wmThinkStart(bubble){
       if(!blob.type.startsWith('video/')){
         throw new Error('Сервер вернул не видео — возможно, запрос отклонён фильтром безопасности или ключ неверный.');
       }
-      const videoUrl = URL.createObjectURL(blob);
+      videoUrl = URL.createObjectURL(blob);
+      }
 
       pendingEl.classList.remove('pending');
       const textEl = pendingEl.querySelector('.msg-text');
@@ -4271,7 +4350,7 @@ function wmThinkStart(bubble){
 
     }catch(err){
       pendingEl.remove();
-      addMessage('error', 'Не удалось получить видео: ' + err.message, { error: true });
+      if(!manualStop) addMessage('error', 'Не удалось получить видео: ' + err.message, { error: true });
     }finally{
       clearTimeout(timeoutId);
       activeStreamController = null;
