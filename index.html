@@ -3773,11 +3773,17 @@ function wmThinkStart(bubble){
     if(mode.isVideoMode){
       if(window.__isPro !== true){ if(window.__openShop) window.__openShop(); return; }
       if(!text){ return; } // для видео нужен текстовый промпт
-      const userDiv = addMessage('user', text, {});
-      history.push({ role: 'user', content: [{ type: 'text', text: text }] });
+      let rawPrompt = text; /* v46.1-strip: приложение уже вписало [SYS]/[РЕЖИМ]-префиксы в input — срезаем */
+      try{
+        if(window.__wmStrip) rawPrompt = window.__wmStrip(text) || text;
+        else if(window.__wandexSiteStrip) rawPrompt = window.__wandexSiteStrip(text) || text;
+      }catch(e){}
+      rawPrompt = rawPrompt.trim() || text;
+      const userDiv = addMessage('user', rawPrompt, {});
+      history.push({ role: 'user', content: [{ type: 'text', text: rawPrompt }] });
       const userIndex = history.length - 1;
       userDiv.dataset.historyIndex = userIndex;
-      addUserActions(userDiv, text, userIndex);
+      addUserActions(userDiv, rawPrompt, userIndex);
       saveState();
 
       input.value = '';
@@ -3785,7 +3791,7 @@ function wmThinkStart(bubble){
       sendBtn.disabled = true;
 
       const pendingEl = addMessage('ai', 'Генерируем видео… это может занять пару минут', { pending: true });
-      await runVideoGeneration(pendingEl, text);
+      await runVideoGeneration(pendingEl, rawPrompt);
       sendBtn.disabled = false;
       return;
     }
@@ -4344,7 +4350,7 @@ function wmThinkStart(bubble){
       hint.textContent = 'Видео доступно только в этой сессии — скачай, если хочешь сохранить (не переживает перезагрузку страницы).';
       textEl.appendChild(hint);
 
-      history.push({ role: 'assistant', content: '[видео сгенерировано: "' + prompt + '" — не сохраняется между сессиями]' });
+      history.push({ role: 'assistant', content: '[видео сгенерировано: "' + String(prompt).slice(0, 140) + '" — не сохраняется между сессиями]' });
       saveState();
       chat.scrollTop = chat.scrollHeight;
 
@@ -5076,10 +5082,11 @@ function wmThinkStart(bubble){
   function startPoll(u){
     try{ if(pollTimer) clearInterval(pollTimer); }catch(e){}
     var wait = document.getElementById('payWait'); if(wait) wait.style.display = 'inline';
-    var n = 0;
+    var n = 0, fails = 0;
     pollTimer = setInterval(function(){
       n++;
       fetch(API + '/shop/status?uid=' + encodeURIComponent(u)).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+        if(!j) fails++;
         if(j && j.pro){
           try{ clearInterval(pollTimer); pollTimer = null; }catch(e){}
           if(wait) wait.style.display = 'none';
@@ -5088,9 +5095,10 @@ function wmThinkStart(bubble){
         } else if(n >= 60){
           try{ clearInterval(pollTimer); pollTimer = null; }catch(e){}
           if(wait) wait.style.display = 'none';
-          note.textContent = 'Пока не вижу перевод. Проверь: 1 ₽ + код ' + CODE + ' в сообщении к переводу. Не получается — жми «написать».';
+          if(fails >= 55){ note.textContent = 'Нет связи с сервером оплаты. Проверь интернет (из РФ иногда нужен VPN) и нажми «Купить» ещё раз. Деньги никуда не уйдут, пока связь не появится.'; }
+          else { note.textContent = 'Пока не вижу перевод. Проверь: 1 ₽ + код ' + CODE + ' в сообщении к переводу. Не получается — жми «написать».'; }
         }
-      }).catch(function(){ if(n >= 60){ try{ clearInterval(pollTimer); pollTimer = null; }catch(e){} } });
+      }).catch(function(){ fails++; if(n >= 60){ try{ clearInterval(pollTimer); pollTimer = null; }catch(e){} note.textContent = 'Нет связи с сервером оплаты. Проверь интернет (из РФ иногда нужен VPN) и нажми «Купить» ещё раз.'; } });
     }, 3000);
   }
   var CODE = null;
@@ -5141,7 +5149,8 @@ function wmThinkStart(bubble){
     buy.textContent = '⏳ Жду перевод — PRO включится сам';
     note.textContent = '';
     fetch(API + '/shop/create', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ uid: u, email: email(), code: CODE }) }).catch(function(){});
+      body: JSON.stringify({ uid: u, email: email(), code: CODE }) }).then(function(r){ if(!r.ok) throw 0; }).catch(function(){
+      note.textContent = '⚠️ Нет связи с сервером оплаты — код не зарегистрирован! Проверь интернет/VPN и нажми «Купить» ещё раз. Пока не нажмёшь — перевод не найдётся.'; });
     startPoll(u);
   });
   document.getElementById('copyCard').addEventListener('click', function(){
