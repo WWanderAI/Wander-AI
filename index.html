@@ -4858,7 +4858,7 @@ function wmThinkStart(bubble){
       <div class="shop-pro-card">
         <div class="shop-pro-name">Wandex PRO</div>
         <div class="shop-pro-desc">Все функции Wandex бесплатны и останутся бесплатными. PRO — это способ поддержать проект: бейдж и особый статус у тебя в профиле.</div>
-        <div class="shop-pro-price">0 ₽ <span>бесплатно · на время запуска</span></div>
+        <div class="shop-pro-price">1 ₽ <span>разово · навсегда</span></div>
         <ul class="shop-pro-list">
           <li>PRO-бейдж в шапке приложения</li>
           <li>Статус «Поддержал проект»</li>
@@ -4884,9 +4884,9 @@ function wmThinkStart(bubble){
           Дефис можно опустить (WDXZXDG тоже найдётся) — некоторые банки его запрещают.
           Почта для связи: <span class="shop-copy">wandexaisupport@gmail.com</span></div>
         </div>
-        <button id="buyProBtn" class="auth-submit-btn" type="button">Получить PRO · 0 ₽</button>
+        <button id="buyProBtn" class="auth-submit-btn" type="button">Оплатить 1 ₽</button>
         <div id="shopNote" class="shop-note"></div>
-        <div class="shop-pay-methods">Бесплатно на время запуска · вопросы — wandexaisupport@gmail.com</div>
+        <div class="shop-pay-methods">Переводом на карту · вопросы и возврат — wandexaisupport@gmail.com</div>
       </div>
     </div>
   </div>
@@ -4982,11 +4982,11 @@ function wmThinkStart(bubble){
       if(j && j.pro){ chip.textContent = 'PRO'; chip.classList.add('pro');
         buy.textContent = 'PRO активен — спасибо!'; buy.disabled = true;
       } else { chip.textContent = 'FREE'; chip.classList.remove('pro');
-        buy.textContent = 'Получить PRO · 0 ₽'; buy.disabled = false;
+        buy.textContent = 'Купить за ' + ((j && j.price) || 1) + ' ₽'; buy.disabled = false;
       }
     }).catch(function(){ chip.textContent = 'FREE'; });
   };
-  var pollTimer = null; /* v43.2-free */
+  var pollTimer = null; /* v44-pay */
   function startPoll(u){
     try{ if(pollTimer) clearInterval(pollTimer); }catch(e){}
     var wait = document.getElementById('payWait'); if(wait) wait.style.display = 'inline';
@@ -5020,8 +5020,8 @@ function wmThinkStart(bubble){
     return c;
   }
   var steps = document.getElementById('paySteps');
-  /* v43.2-free: пока PRO бесплатен — выдача в один клик. Платный путь (шаги/код/опрос) жив и вернётся переключением FREE_MODE. */
-  var FREE_MODE = true;
+  /* v44-pay: пока PRO бесплатен — выдача в один клик. Платный путь (шаги/код/опрос) жив и вернётся переключением FREE_MODE. */
+  var FREE_MODE = false;
   function freeFlow(u){
     buy.disabled = true; buy.textContent = '⏳ Выдаю PRO…'; note.textContent = '';
     fetch(API + '/shop/free', { method:'POST', headers:{'Content-Type':'application/json'},
