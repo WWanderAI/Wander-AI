@@ -5083,20 +5083,3 @@ function wmThinkStart(bubble){
 </script>
 </body>
 </html>
-.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){}, function(){});
-    this.textContent = '✓'; var b=this; setTimeout(function(){ b.textContent='копировать'; }, 1500);
-  });
-  document.getElementById('mailBtn').addEventListener('click', function(){
-    var u = uid();
-    var body = encodeURIComponent('Привет! Оплатил(а) 1 ₽ за Wandex PRO.\nКод: ' + (CODE||'—') + '\nАккаунт: ' + (email()||'—') + '\nUID: ' + (u||'—') + '\nДата перевода: ');
-    window.location.href = 'mailto:wandexaisupport@gmail.com?subject=' + encodeURIComponent('Wandex PRO — ' + (CODE||'')) + '&body=' + body;
-  });
-  if(location.hash.indexOf('pro=1') !== -1){
-    setTimeout(window.__shopRefresh, 1500);
-    setTimeout(window.__shopRefresh, 4000);
-  }
-  window.__shopRefresh();
-})();
-</script>
-</body>
-</html>
