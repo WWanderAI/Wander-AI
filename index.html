@@ -4284,7 +4284,7 @@ function wmThinkStart(bubble){
         const eng = await translatePromptToEnglish(prompt);
         const seed = Math.floor(Math.random() * 1000000);
         const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(eng + ', cinematic wide shot, highly detailed, beautiful lighting, dynamic action, sharp focus, no text, no watermark, no logo, no signature') /* v46.3-videoq */
-          + '?width=1280&height=720&model=flux&nologo=true&seed=' + seed;
+          + '?width=1280&height=720&model=flux&nologo=true&enhance=true&seed=' + seed; /* v46.4-videoq2: enhance чинит попадание по промпту, когда переводчик упёрся в лимит */
         let imgResp;
         try{ imgResp = await fetch(imgUrl, { signal: controller.signal }); }
         catch(fe){
