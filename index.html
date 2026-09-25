@@ -4283,7 +4283,7 @@ function wmThinkStart(bubble){
         setPending('Рисую кадр… (бесплатно, ~30 сек)');
         const eng = await translatePromptToEnglish(prompt);
         const seed = Math.floor(Math.random() * 1000000);
-        const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(eng + ', cinematic wide shot, highly detailed, beautiful lighting')
+        const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(eng + ', cinematic wide shot, highly detailed, beautiful lighting, dynamic action, sharp focus, no text, no watermark, no logo, no signature') /* v46.3-videoq */
           + '?width=1280&height=720&model=flux&nologo=true&seed=' + seed;
         let imgResp;
         try{ imgResp = await fetch(imgUrl, { signal: controller.signal }); }
