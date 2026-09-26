@@ -2061,6 +2061,10 @@ main#chat{scroll-behavior:smooth;}
     'poolside/laguna-xs-2.1:free', /* v49-models */
     'inclusionai/ling-3.0-flash-sante:free'
   ];
+  /* v54-gemini: ключ юзера из Google AI Studio (проверен живьём 26.09) */
+  const GEMINI_CHAT_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  const GEMINI_KEY = atob('QVEuQWI4Uk42TENnUVB6NTNkU0tpb2JNazYtYy01dzhhazFvdFY5OXMyNGs0U1VzbERGd0E=');
+  const GEMINI_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
   const TRANSLATE_API_KEY = 'RQozfNcfvJjUi4gaSBBCi2QRBtD0zib1';  // перевод промпта перед генерацией картинки
   const THEME_API_KEY = '4n7aoPsIDyH1dr8VUrGCMUmGumdUIFnh';      // генератор темы через ИИ в настройках
 
@@ -3667,25 +3671,28 @@ function wmThinkStart(bubble){
       let response = null;
       let lastNetErr = null;
       let lastStatus = 0;
+      var __mdlQ = [];
+      for(var __gi = 0; __gi < GEMINI_MODELS.length; __gi++){ __mdlQ.push({ u: GEMINI_CHAT_URL, k: GEMINI_KEY, m: GEMINI_MODELS[__gi], g: 1 }); }
+      for(var __oi = 0; __oi < CHAT_MODELS.length; __oi++){ __mdlQ.push({ u: OPENROUTER_CHAT_URL, k: OPENROUTER_KEY, m: CHAT_MODELS[__oi], g: 0 }); }
       for(var MDLtry = 0; MDLtry < 2 && !response; MDLtry++){ /* v49-models: 2 прохода по моделям */
       if(MDLtry > 0){ lastNetErr = null; await new Promise(function(r){ setTimeout(r, 4000); }); }
-      for(var MDLi = 0; MDLi < CHAT_MODELS.length; MDLi++){
-        try{
-          response = await fetch(OPENROUTER_CHAT_URL, {
+      for(var MDLi = 0; MDLi < __mdlQ.length; MDLi++){ var __qe = __mdlQ[MDLi];
+        try{ try{ if(__qe.g){ window.__wmLastVia = 'gemini'; } }catch(eV){}
+          response = await fetch(__qe.u, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-              'Authorization': 'Bearer ' + OPENROUTER_KEY,
+              'Authorization': 'Bearer ' + __qe.k,
               'HTTP-Referer': location.origin,
               'X-Title': 'Wandex AI'
             },
             body: JSON.stringify({
-              model: CHAT_MODELS[MDLi],
+              model: __qe.m,
               messages: openAiMessages,
               max_tokens: mode.max_tokens,
               stream: false,
-              reasoning: { enabled: false }
+              reasoning: (__qe.g ? undefined : { enabled: false })
             }),
             signal: controller.signal
           });
@@ -4049,14 +4056,18 @@ function wmThinkStart(bubble){
         reasoning: { enabled: false }
       };
       let response = null;
+      var __mdlQ = [];
+      for(var __gi = 0; __gi < GEMINI_MODELS.length; __gi++){ __mdlQ.push({ u: GEMINI_CHAT_URL, k: GEMINI_KEY, m: GEMINI_MODELS[__gi], g: 1 }); }
+      for(var __oi = 0; __oi < CHAT_MODELS.length; __oi++){ __mdlQ.push({ u: OPENROUTER_CHAT_URL, k: OPENROUTER_KEY, m: CHAT_MODELS[__oi], g: 0 }); }
       for(var MDLtry2 = 0; MDLtry2 < 2 && !response; MDLtry2++){ /* v49-models: 2 прохода */
       if(MDLtry2 > 0){ await new Promise(function(r){ setTimeout(r, 4000); }); }
-      for(var MDLi = 0; MDLi < CHAT_MODELS.length; MDLi++){
-        try{
-          payload.model = CHAT_MODELS[MDLi];
-          response = await fetch(OPENROUTER_CHAT_URL, {
+      for(var MDLi = 0; MDLi < __mdlQ.length; MDLi++){ var __qe = __mdlQ[MDLi];
+        try{ try{ if(__qe.g){ window.__wmLastVia = 'gemini'; } }catch(eV){}
+          payload.model = __qe.m;
+          if(__qe.g){ delete payload.reasoning; } else if(!payload.reasoning){ payload.reasoning = { enabled: false }; }
+          response = await fetch(__qe.u, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENROUTER_KEY },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + __qe.k },
             body: JSON.stringify(payload),
             signal: controller.signal
           });
