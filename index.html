@@ -3696,7 +3696,7 @@ function wmThinkStart(bubble){
             }),
             signal: controller.signal
           });
-          if(response.status === 429 || response.status === 404 || response.status >= 500){ lastStatus = response.status; try{ var __dj = await response.clone().json(); var __dm = (__dj && __dj.error && (__dj.error.message || __dj.error)) || ''; if(__dm){ window.__wmLastNetDiag = String(__dm).slice(0, 160); } }catch(eDg){} response = null; continue; } /* v55-netdiag */
+          if(response.status === 429 || response.status === 404 || response.status >= 500){ lastStatus = response.status; try{ var __djT = await response.clone().text(); var __hh = '?'; try{ __hh = new URL(__qe.u).host; }catch(eH){} var __lg = (__qe.m + '@' + __hh + ' ' + response.status + ' ' + __djT.slice(0, 90)).replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lg).slice(-420); }catch(eDg){} response = null; continue; } /* v56-netdiag2 */
         }catch(fetchErr){
           if(fetchErr.name === 'AbortError'){
             clearTimeout(timeoutId);
@@ -3709,9 +3709,9 @@ function wmThinkStart(bubble){
       } /* /v49-models */
       if(!response){
         clearTimeout(timeoutId);
-        if(lastNetErr){ throw new Error('Нет соединения (код ' + lastStatus + (window.__wmLastNetDiag ? ' [' + window.__wmLastNetDiag + ']' : '') + '). Проверь интернет и попробуй ещё раз.'); } /* v55-netdiag */
+        if(lastNetErr){ throw new Error('Нет соединения (код ' + lastStatus + ').' + ' [skip:' + (window.__wmSkipLog || '-') + ']' + ' [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Проверь интернет и попробуй ещё раз.'); } /* v56-netdiag2 */
         if(lastStatus === 429){ throw new Error('Дневной бесплатный лимит исчерпан. Обновится утром около 05:00 — возвращайся! 🌙'); }
-        throw new Error('Модели заняты (' + (window.__wmLastVia || '?') + ' ' + lastStatus + (window.__wmLastNetDiag ? ' [' + window.__wmLastNetDiag + ']' : '') + '). Попробуй ещё раз через минуту.'); /* v55-netdiag */
+        throw new Error('Модели заняты (' + (window.__wmLastVia || '?') + ' ' + lastStatus + ').' + ' [skip:' + (window.__wmSkipLog || '-') + ']' + ' [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Попробуй ещё раз через минуту.'); /* v56-netdiag2 */
       }
 
       if(response.status === 401){
@@ -4071,7 +4071,7 @@ function wmThinkStart(bubble){
             body: JSON.stringify(payload),
             signal: controller.signal
           });
-          if(response.status === 429 || response.status === 404 || response.status >= 500){ try{ var __dj2 = await response.clone().json(); var __dm2 = (__dj2 && __dj2.error && (__dj2.error.message || __dj2.error)) || ''; if(__dm2){ window.__wmLastNetDiag = String(__dm2).slice(0, 160); } }catch(eDg2){} response = null; continue; }
+          if(response.status === 429 || response.status === 404 || response.status >= 500){ try{ var __djT2 = await response.clone().text(); var __hh2 = '?'; try{ __hh2 = new URL(__qe.u).host; }catch(eH2){} var __lg2 = (__qe.m + '@' + __hh2 + ' ' + response.status + ' ' + __djT2.slice(0, 90)).replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lg2).slice(-420); }catch(eDg2){} response = null; continue; }
         }catch(eM2){ response = null; continue; }
         break;
       }
@@ -4079,7 +4079,7 @@ function wmThinkStart(bubble){
       if(!response){
         clearTimeout(timeoutId);
         pendingEl.remove();
-        addMessage('error', '🌐 Модели заняты или лимит исчерпан' + (window.__wmLastNetDiag ? ' [' + window.__wmLastNetDiag + ']' : '') + '. Попробуй ещё раз через минуту.');
+        addMessage('error', '🌐 Модели заняты [skip:' + (window.__wmSkipLog || '-') + '] [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Попробуй ещё раз через минуту.');
         return;
       }
       if(!response.ok){
