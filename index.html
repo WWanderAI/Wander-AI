@@ -2047,7 +2047,7 @@ main#chat{scroll-behavior:smooth;}
   // проекта это может быть приемлемо, но для более серьёзного продукта его
   // стоит спрятать за прокси (Cloudflare Worker / Firebase Cloud Function),
   // а не хранить здесь в открытом виде.
-  const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
+  const OPENROUTER_CHAT_URL = 'https://openrouter.ai' + '/api/v1/chat/completions'; /* v53-noalt: собираем динамически — нативные replace APK нас не видят, роутим сами через PX */
   const OPENROUTER_KEY = atob('c2stb3ItdjEtZGJkN2JjMzQxM2FkMTgzNDExNDI1MGE2ZjI2Yzg5ZDMzOWUwOWZjYWRhOWU2NzM0M2Y5MDhmNjMwZjRlMjRhMw==');
   // Цепочка моделей: сильнейшая первой, при отказе авто-переход к следующей
   const CHAT_MODELS = [
