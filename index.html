@@ -384,6 +384,7 @@ return chain(0);
   }
 
   #videoModeBtn{display:none!important;} /* v61-hidevideo: кнопка видео временно скрыта — вернуть = удалить эту строку */
+  #planChip{display:none!important;} /* v62-hideshop: бейдж FREE/PRO временно скрыт — вернуть = удалить строку */
   .mode-btn{
     font-family:var(--font-body);
     cursor:pointer;
@@ -5154,7 +5155,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   var note = document.getElementById('shopNote');
   function uid(){ return window.__wandexUid || null; }
   function email(){ return window.__wandexEmail || ''; }
-  function openShop(){ ov.classList.remove('hide'); note.textContent=''; autoCreate(); } /* v46.2-autocreate */
+  function openShop(){ return; /* v62-hideshop: магазин временно отключён — вернуть = удалить return */ ov.classList.remove('hide'); note.textContent=''; autoCreate(); } /* v46.2-autocreate */
   window.__openShop = openShop;
   function autoCreate(){
     try{
