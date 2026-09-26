@@ -2055,10 +2055,10 @@ main#chat{scroll-behavior:smooth;}
     'nvidia/nemotron-3-super-120b-a12b:free',
     'cohere/north-mini-code:free',
     'poolside/laguna-s-2.1:free',
-    'z-ai/glm-5.2:free',
+    'nvidia/nemotron-3.5-lightning:free', /* v49-models */
     'google/gemma-4-31b-it:free',
     'qwen/qwen3.8-27b:free',
-    'deepseek/deepseek-v4-flash-0731:free',
+    'poolside/laguna-xs-2.1:free', /* v49-models */
     'inclusionai/ling-3.0-flash-sante:free'
   ];
   const TRANSLATE_API_KEY = 'RQozfNcfvJjUi4gaSBBCi2QRBtD0zib1';  // перевод промпта перед генерацией картинки
@@ -3645,6 +3645,8 @@ function wmThinkStart(bubble){
       let response = null;
       let lastNetErr = null;
       let lastStatus = 0;
+      for(var MDLtry = 0; MDLtry < 2 && !response; MDLtry++){ /* v49-models: 2 прохода по моделям */
+      if(MDLtry > 0){ lastNetErr = null; await new Promise(function(r){ setTimeout(r, 4000); }); }
       for(var MDLi = 0; MDLi < CHAT_MODELS.length; MDLi++){
         try{
           response = await fetch(OPENROUTER_CHAT_URL, {
@@ -3675,6 +3677,7 @@ function wmThinkStart(bubble){
         }
         break;
       }
+      } /* /v49-models */
       if(!response){
         clearTimeout(timeoutId);
         if(lastNetErr){ throw new Error('Нет соединения с сервером. Проверь интернет и попробуй ещё раз.'); }
@@ -4016,6 +4019,8 @@ function wmThinkStart(bubble){
         reasoning: { enabled: false }
       };
       let response = null;
+      for(var MDLtry2 = 0; MDLtry2 < 2 && !response; MDLtry2++){ /* v49-models: 2 прохода */
+      if(MDLtry2 > 0){ await new Promise(function(r){ setTimeout(r, 4000); }); }
       for(var MDLi = 0; MDLi < CHAT_MODELS.length; MDLi++){
         try{
           payload.model = CHAT_MODELS[MDLi];
@@ -4029,6 +4034,7 @@ function wmThinkStart(bubble){
         }catch(eM2){ response = null; continue; }
         break;
       }
+      } /* /v49-models */
       if(!response){
         clearTimeout(timeoutId);
         pendingEl.remove();
