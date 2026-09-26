@@ -50,7 +50,7 @@ try{
 (function(){
 try{
 if(!window.__wandexPx){ window.__wandexPx=1; var __xf=window.fetch; var OR='https://openrouter.ai';
-var PX=['https://hazy-hamster-7342.wandexai.deno.net','https://wandexai.noob15526.workers.dev']; /* v51-px: deno первый — workers мёртв (404) */
+var PX=['https://hazy-hamster-7342.wandexai.deno.net']; /* v59-no401: workers чужой (401 cookie) — убран, хвост прямой */
 window.fetch=function(){ var args=arguments;
 try{
 var u=(typeof args[0]==='string')?args[0]:((args[0]&&args[0].url)||'');
@@ -61,7 +61,7 @@ function via(px){ try{window.__wmLastVia=px;}catch(e){} var purl=toPx(u,px); var
 if(typeof a2[0]==='string'){ a2[0]=purl; } else if(a2[0]&&a2[0].url){ try{ a2[0]=new Request(purl,a2[0]); }catch(e1){ a2[0]=purl; } }
 return __xf.apply(window,a2); }
 function chain(i){ if(i>=PX.length){ try{window.__wmLastVia='direct';}catch(e){} return __xf.apply(window,args); }
-return via(PX[i]).then(function(r){ if(r&&(r.status===0||r.status===404||r.status>=500)){ return chain(i+1); } return r; },function(e2){ return chain(i+1); }); } /* v51-px: фолбэк и на 404, в конце цепочки — прямой запрос */
+return via(PX[i]).then(function(r){ if(r&&(r.status===0||r.status===401||r.status===404||r.status>=500)){ return chain(i+1); } return r; },function(e2){ return chain(i+1); }); } /* v51-px: фолбэк и на 404, в конце цепочки — прямой запрос */
 return chain(0);
 }catch(e9){ return __xf.apply(window,args); } };
 }
@@ -3700,7 +3700,7 @@ function wmThinkStart(bubble){
             }),
             signal: controller.signal
           });
-          if(response.status === 429 || response.status === 404 || response.status >= 500){ lastStatus = response.status; try{ var __djT = await response.clone().text(); var __hh = '?'; try{ __hh = new URL(__qe.u).host; }catch(eH){} var __lg = (__qe.m + '@' + __hh + ' ' + response.status + ' ' + __djT.slice(0, 90)).replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lg).slice(-420); }catch(eDg){} response = null; continue; } /* v56-netdiag2 */
+          if(response.status === 429 || response.status === 404 || response.status === 401 || response.status >= 500){ lastStatus = response.status; /* v59-no401 */ try{ var __djT = await response.clone().text(); var __hh = '?'; try{ __hh = new URL(__qe.u).host; }catch(eH){} var __lg = (__qe.m + '@' + __hh + ' ' + response.status + ' ' + __djT.slice(0, 90)).replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lg).slice(-420); }catch(eDg){} response = null; continue; } /* v56-netdiag2 */
         }catch(fetchErr){
           if(fetchErr.name === 'AbortError'){
             clearTimeout(timeoutId);
@@ -3720,7 +3720,7 @@ function wmThinkStart(bubble){
 
       if(response.status === 401){
         clearTimeout(timeoutId);
-        throw new Error('Сервер отклонил запрос. Попробуй ещё раз чуть позже.');
+        throw new Error('Сервер отклонил запрос [skip:' + (window.__wmSkipLog || '-') + '] [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Попробуй ещё раз чуть позже.'); /* v59-no401 */
       }
       if(response.status === 429){
         clearTimeout(timeoutId);
@@ -4076,7 +4076,7 @@ function wmThinkStart(bubble){
             body: JSON.stringify(payload),
             signal: controller.signal
           });
-          if(response.status === 429 || response.status === 404 || response.status >= 500){ try{ var __djT2 = await response.clone().text(); var __hh2 = '?'; try{ __hh2 = new URL(__qe.u).host; }catch(eH2){} var __lg2 = (__qe.m + '@' + __hh2 + ' ' + response.status + ' ' + __djT2.slice(0, 90)).replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lg2).slice(-420); }catch(eDg2){} response = null; continue; }
+          if(response.status === 429 || response.status === 404 || response.status === 401 || response.status >= 500){ try{ var __djT2 /* v59-no401 */ = await response.clone().text(); var __hh2 = '?'; try{ __hh2 = new URL(__qe.u).host; }catch(eH2){} var __lg2 = (__qe.m + '@' + __hh2 + ' ' + response.status + ' ' + __djT2.slice(0, 90)).replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lg2).slice(-420); }catch(eDg2){} response = null; continue; }
         }catch(eM2){ response = null; continue; }
         break;
       }
@@ -4401,7 +4401,7 @@ function wmThinkStart(bubble){
       }
 
       if(response.status === 401 || response.status === 403){
-        throw new Error('Сервер отклонил запрос. Попробуй ещё раз чуть позже.');
+        throw new Error('Сервер отклонил запрос [skip:' + (window.__wmSkipLog || '-') + '] [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Попробуй ещё раз чуть позже.'); /* v59-no401 */
       }
       if(response.status === 429){
         throw new Error('Превышен лимит запросов на генерацию видео. Подожди немного и попробуй снова.');
