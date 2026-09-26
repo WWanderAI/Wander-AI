@@ -3436,6 +3436,14 @@ main#chat{scroll-behavior:smooth;}
 
 
   function addMessage(role, text, opts={}){
+    if(role === 'user' && !opts.markdown){
+      try{
+        let __s = String(text == null ? '' : text);
+        if(window.__wmStrip){ __s = window.__wmStrip(__s) || __s; }
+        if(window.__wandexSiteStrip){ __s = window.__wandexSiteStrip(__s) || __s; }
+        text = __s;
+      }catch(eD){}
+    }
     if(emptyState) emptyState.remove();
     const stale = document.getElementById('emptyState');
     if(stale) stale.remove();
@@ -3625,7 +3633,21 @@ function wmThinkStart(bubble){
     }, 400);
   }
 
+  /* v50-race: отправил → сразу переключил чат: ответ сохраняем в правильный чат, чужой не пачкаем */
+  function __wmGone(pendingEl, sendChatId){
+    try{ return (!pendingEl || !pendingEl.isConnected || activeChatId !== sendChatId); }
+    catch(e){ return true; }
+  }
+  function __wmSavebg(sendChatId, entry){
+    try{
+      const oc = findChat(sendChatId);
+      if(oc){ oc.history = oc.history || []; oc.history.push(entry); oc.updatedAt = Date.now(); }
+      persistChats();
+      if(activeChatId === sendChatId && oc){ history = oc.history; renderMessagesFromHistory(history); }
+    }catch(e){}
+  }
   async function runCompletion(pendingEl){
+    const sendChatId = activeChatId;
     try{ wmThinkStart(pendingEl); }catch(eT){}
     setGenerating(true);
     manualStop = false;
@@ -3759,6 +3781,11 @@ function wmThinkStart(bubble){
         }
       }
       reply = stripTrailingPeriod(reply);
+      if(__wmGone(pendingEl, sendChatId)){
+        __wmSavebg(sendChatId, { role: 'assistant', content: reply });
+        playNotifySound();
+        return;
+      }
       const textEl = pendingEl.querySelector('.msg-text');
       pendingEl.classList.remove('pending');
       textEl.innerHTML = renderMarkdown(reply);
@@ -3768,7 +3795,9 @@ function wmThinkStart(bubble){
       playNotifySound();
 
     }catch(err){
+      const __gone = __wmGone(pendingEl, typeof sendChatId === 'undefined' ? activeChatId : sendChatId);
       pendingEl.remove();
+      if(__gone){ return; }
       const errEl = addMessage('error', 'Не удалось получить ответ: ' + err.message, { error: true });
       const bar = document.createElement('div');
       bar.className = 'msg-actions';
@@ -3991,6 +4020,7 @@ function wmThinkStart(bubble){
   }
 
   async function runSearchAnswer(pendingEl, query){
+    const sendChatId = activeChatId;
     setGenerating(true);
     manualStop = false;
     const skel = wmImageSkeleton(pendingEl);
@@ -4069,6 +4099,7 @@ function wmThinkStart(bubble){
         body.innerHTML = body.innerHTML.replace(/\[([^\]<]+)\]\((https?:\/\/[^\s<)]+)\)/g,
           '<a href="$2" target="_blank" rel="noopener" style="color:var(--amber);text-decoration:underline;word-break:break-all;">$1</a>');
       }catch(eL){}
+      if(__wmGone(pendingEl, sendChatId)){ __wmSavebg(sendChatId, { role: 'assistant', content: reply }); playNotifySound(); return; }
       tx.appendChild(body);
       history.push({ role: 'assistant', content: reply });
       addAiActions(pendingEl, reply, true);
@@ -4076,7 +4107,7 @@ function wmThinkStart(bubble){
     }catch(eS){
       clearTimeout(timeoutId);
       try{ pendingEl.remove(); }catch(e4){}
-      addMessage('error', '🌐 Поиск не удался: ' + (eS && eS.message ? eS.message : 'нет соединения') + '. Попробуй ещё раз.');
+      if(!__wmGone(pendingEl, sendChatId)){ addMessage('error', '🌐 Поиск не удался: ' + (eS && eS.message ? eS.message : 'нет соединения') + '. Попробуй ещё раз.'); }
     }finally{
       setGenerating(false);
       activeStreamController = null;
@@ -4119,6 +4150,7 @@ function wmThinkStart(bubble){
   }
 
   async function runImageGeneration(pendingEl, prompt){
+    const sendChatId = activeChatId;
     setGenerating(true);
     manualStop = false;
     const skel = wmImageSkeleton(pendingEl);
@@ -4231,13 +4263,14 @@ function wmThinkStart(bubble){
       sessionGallery.unshift({ url: imageUrl, prompt: prompt, time: Date.now() });
       wmImageCooldownStart();
 
+      if(__wmGone(pendingEl, sendChatId)){ __wmSavebg(sendChatId, { role: 'assistant', content: '[картинка сгенерирована]' }); playNotifySound(); return; }
       history.push({ role: 'assistant', content: '[картинка сгенерирована: "' + prompt + '" — не сохраняется между сессиями]' });
       saveState();
       chat.scrollTop = chat.scrollHeight;
 
     }catch(err){
       pendingEl.remove();
-      addMessage('error', 'Не удалось получить картинку: ' + err.message, { error: true });
+      if(!__wmGone(pendingEl, sendChatId)){ addMessage('error', 'Не удалось получить картинку: ' + err.message, { error: true }); }
     }finally{
       clearTimeout(timeoutId);
       activeStreamController = null;
@@ -4301,6 +4334,7 @@ function wmThinkStart(bubble){
   }
 
   async function runVideoGeneration(pendingEl, prompt){
+    const sendChatId = activeChatId;
     setGenerating(true);
     manualStop = false;
     const controller = new AbortController();
@@ -4383,13 +4417,14 @@ function wmThinkStart(bubble){
       hint.textContent = 'Видео доступно только в этой сессии — скачай, если хочешь сохранить (не переживает перезагрузку страницы).';
       textEl.appendChild(hint);
 
+      if(__wmGone(pendingEl, sendChatId)){ __wmSavebg(sendChatId, { role: 'assistant', content: '[видео сгенерировано]' }); playNotifySound(); return; }
       history.push({ role: 'assistant', content: '[видео сгенерировано: "' + String(prompt).slice(0, 140) + '" — не сохраняется между сессиями]' });
       saveState();
       chat.scrollTop = chat.scrollHeight;
 
     }catch(err){
       pendingEl.remove();
-      if(!manualStop) addMessage('error', 'Не удалось получить видео: ' + err.message, { error: true });
+      if(!manualStop && !__wmGone(pendingEl, sendChatId)) addMessage('error', 'Не удалось получить видео: ' + err.message, { error: true });
     }finally{
       clearTimeout(timeoutId);
       activeStreamController = null;
