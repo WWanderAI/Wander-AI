@@ -50,7 +50,7 @@ try{
 (function(){
 try{
 if(!window.__wandexPx){ window.__wandexPx=1; var __xf=window.fetch; var OR='https://openrouter.ai';
-var PX=['https://wandexai.noob15526.workers.dev','https://hazy-hamster-7342.wandexai.deno.net'];
+var PX=['https://hazy-hamster-7342.wandexai.deno.net','https://wandexai.noob15526.workers.dev']; /* v51-px: deno первый — workers мёртв (404) */
 window.fetch=function(){ var args=arguments;
 try{
 var u=(typeof args[0]==='string')?args[0]:((args[0]&&args[0].url)||'');
@@ -61,7 +61,7 @@ function via(px){ var purl=toPx(u,px); var a2=[]; for(var i=0;i<args.length;i++)
 if(typeof a2[0]==='string'){ a2[0]=purl; } else if(a2[0]&&a2[0].url){ try{ a2[0]=new Request(purl,a2[0]); }catch(e1){ a2[0]=purl; } }
 return __xf.apply(window,a2); }
 function chain(i){ if(i>=PX.length){ return __xf.apply(window,args); }
-return via(PX[i]).then(function(r){ if(r&&(r.status===0||r.status>=500)&&i+1<PX.length){ return chain(i+1); } return r; },function(e2){ return chain(i+1); }); }
+return via(PX[i]).then(function(r){ if(r&&(r.status===0||r.status===404||r.status>=500)){ return chain(i+1); } return r; },function(e2){ return chain(i+1); }); } /* v51-px: фолбэк и на 404, в конце цепочки — прямой запрос */
 return chain(0);
 }catch(e9){ return __xf.apply(window,args); } };
 }
