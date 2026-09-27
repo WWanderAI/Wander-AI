@@ -3403,6 +3403,50 @@ main#chat{scroll-behavior:smooth;}
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   });
   /* v65-promptboost: автоматические улучшения промта — 10 вариантов под полем ввода */
+  var WM_SUGGEST_VISIBLE = false; /* v66-aienrich: чипы скрыты — улучшение только для ИИ */
+  function wmSuggEnrich(base){
+    try{
+      var t = String(base || '').replace(/\s+/g, ' ').trim();
+      if(t.length < 10 || t.length > 500) return base;
+      var det = t;
+      try{ if(typeof window !== 'undefined' && window.__wmStrip) det = window.__wmStrip(t) || t; }catch(e0){}
+      var low = ' ' + det.toLowerCase() + ' ';
+      var intent = 'gen';
+      if(/(игра|игру|змейк|тетрис|сап[её]р|2048|платформер|шутер|гонк|шахмат|шашк|крестики|нолики|судоку|пятнашк|арканоид|раннер|кликер|виселица|морской бой|пинг-понг|пингпонг|флаппи|динозавр)/.test(low)) intent = 'game';
+      else if(/(нарисуй|сгенерируй|картинк|изображени|фотографи|рисунок|логотип|обои|портрет|пейзаж)/.test(low)) intent = 'img';
+      else if(/(напиши|код|функци|скрипт|программ|бот|сайт|парсер|калькулятор|сортиров|алгоритм|html|css|javascript|питон|python)/.test(low)) intent = 'code';
+      else if(/(реши|уравнен|задач|пример|посчитай|вычисли|математ|формул|сколько будет|теорем|интеграл|производн)/.test(low)) intent = 'math';
+      else if(/(пост|стать|письмо|эссе|сочинение|поздравлен|резюме|описание|текст|придумай|слоган|реклам|сценарий|историю|рассказ|стих)/.test(low)) intent = 'text';
+      else if(/(объясни|почему|зачем|как работает|что такое|расскажи)/.test(low)) intent = 'expl';
+      var G = {
+        game: ['в одном HTML-файле', 'с красивым неоновым дизайном', 'с управлением стрелками и WASD', 'со счётом очков и рекордом'],
+        code: ['с комментариями к коду', 'с обработкой ошибок', 'с примером использования'],
+        img: ['высокая детализация', 'красивое освещение', 'без текста и водяных знаков'],
+        math: ['реши пошагово', 'с проверкой ответа'],
+        text: ['со структурой и заголовками', 'с примерами'],
+        expl: ['с примерами из жизни', 'в конце — короткое резюме'],
+        gen: ['подробно', 'с примерами']
+      };
+      var opts = G[intent] || G.gen;
+      function dup(opt){
+        try{
+          var w = opt.toLowerCase().replace(/^(в|на|с|со|без|от|к|под|для|и|по)\s+/, '').split(/[\s«»„“"']/)[0] || '';
+          w = w.replace(/[^а-яёa-z]/g, '');
+          if(w.length < 4) return false;
+          return low.indexOf(w) >= 0 || low.indexOf(w.slice(0, 6)) >= 0;
+        }catch(e1){ return false; }
+      }
+      var tails = [];
+      for(var i = 0; i < opts.length && tails.length < 4; i++){
+        if(dup(opts[i])) continue;
+        var tail = opts[i].charAt(0).toLowerCase() + opts[i].slice(1);
+        if((t + ', ' + tails.concat([tail]).join(', ')).length > 300) break;
+        tails.push(tail);
+      }
+      if(!tails.length) return base;
+      return t + ', ' + tails.join(', ');
+    }catch(e){ return base; }
+  }
   var wmSuggMuteUntil = 0;
   var wmSuggTimer = null;
   function wmSuggHide(){ try{ var b = document.getElementById('wmSugg'); if(b) b.style.display = 'none'; }catch(e){} }
@@ -3466,6 +3510,7 @@ main#chat{scroll-behavior:smooth;}
   function wmSuggRefresh(){
     try{
       var box = document.getElementById('wmSugg'); if(!box) return;
+      if(!WM_SUGGEST_VISIBLE){ box.style.display = 'none'; return; } /* v66-aienrich */
       if(Date.now() < wmSuggMuteUntil){ box.style.display = 'none'; return; }
       if(typeof isGenerating !== 'undefined' && isGenerating){ box.style.display = 'none'; return; }
       var v = (typeof input !== 'undefined' && input.value) || '';
@@ -3800,6 +3845,18 @@ function wmThinkStart(bubble){
     try{
       const mode = MODES[currentMode];
       const openAiMessages = toOpenAiMessages(trimHistory(history), mode.system);
+      try{ /* v66-aienrich: обогащаем ПОСЛЕДНИЙ вопрос только для ИИ */
+        for(var ei = openAiMessages.length - 1; ei >= 0; ei--){
+          var em = openAiMessages[ei];
+          if(em && em.role === 'user' && Array.isArray(em.content)){
+            for(var bi = 0; bi < em.content.length; bi++){
+              var bb = em.content[bi];
+              if(bb && bb.type === 'text' && typeof bb.text === 'string' && bb.text.trim().length >= 10){ bb.text = wmSuggEnrich(bb.text); break; }
+            }
+            break;
+          }
+        }
+      }catch(eER){}
 
       const controller = new AbortController();
       activeStreamController = controller;
@@ -4320,7 +4377,7 @@ function wmThinkStart(bubble){
 
     try{
       skel.set('Понимаю, что рисовать…');
-      const englishPrompt = await translatePromptToEnglish(prompt);
+      const englishPrompt = await translatePromptToEnglish(wmSuggEnrich(prompt)); /* v66-aienrich */
       skel.set('Продумываю детали…');
 
       // Голый промпт даёт кашу — добавляем качество и стиль под задачу.
@@ -4509,7 +4566,7 @@ function wmThinkStart(bubble){
       function setPending(x){ try{ const el = pendingEl.querySelector('.msg-text'); if(el) el.textContent = x; }catch(e){} }
       if(VIDEO_ENGINE === 'express'){
         setPending('Рисую кадр… (бесплатно, ~30 сек)');
-        const eng = await translatePromptToEnglish(prompt);
+        const eng = await translatePromptToEnglish(wmSuggEnrich(prompt)); /* v66-aienrich */
         const seed = Math.floor(Math.random() * 1000000);
         const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(eng + ', cinematic wide shot, highly detailed, beautiful lighting, dynamic action, sharp focus, no text, no watermark, no logo, no signature') /* v46.3-videoq */
           + '?width=1280&height=720&model=flux&nologo=true&enhance=true&seed=' + seed; /* v46.4-videoq2: enhance чинит попадание по промпту, когда переводчик упёрся в лимит */
