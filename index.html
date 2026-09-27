@@ -385,6 +385,10 @@ return chain(0);
 
   #videoModeBtn{display:none!important;} /* v61-hidevideo: кнопка видео временно скрыта — вернуть = удалить эту строку */
   #planChip{display:none!important;} /* v62-hideshop: бейдж FREE/PRO временно скрыт — вернуть = удалить строку */
+  .wm-sugg{display:none;gap:6px;overflow-x:auto;padding:8px 10px 2px;scrollbar-width:none;} /* v65-promptboost */
+  .wm-sugg::-webkit-scrollbar{display:none;}
+  .wm-sugg-chip{flex:0 0 auto;max-width:78vw;border:1px solid var(--line);background:var(--bg-panel-2);color:var(--text-dim);font:500 12px/1.35 var(--font-body);padding:7px 11px;border-radius:12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
+  .wm-sugg-chip:active{transform:scale(.96);border-color:var(--amber);color:var(--amber);}
   .mode-btn{
     font-family:var(--font-body);
     cursor:pointer;
@@ -1682,6 +1686,7 @@ main#chat{scroll-behavior:smooth;}
 
 <footer>
   <div class="attach-preview" id="attachPreview"></div>
+  <div class="wm-sugg" id="wmSugg" style="display:none"></div> <!-- v65-promptboost -->
   <div class="input-row">
     <button id="attach" aria-label="Прикрепить изображение">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -3397,6 +3402,97 @@ main#chat{scroll-behavior:smooth;}
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   });
+  /* v65-promptboost: автоматические улучшения промта — 10 вариантов под полем ввода */
+  var wmSuggMuteUntil = 0;
+  var wmSuggTimer = null;
+  function wmSuggHide(){ try{ var b = document.getElementById('wmSugg'); if(b) b.style.display = 'none'; }catch(e){} }
+  function wmSuggBuild(base){
+    var t = String(base || '').replace(/\s+/g, ' ').trim().replace(/[.?!…]+$/, '');
+    if(t.length < 10 || t.length > 300) return [];
+    var low = ' ' + t.toLowerCase() + ' ';
+    var intent = 'gen';
+    if(/(игра|игру|змейк|тетрис|сап[её]р|2048|платформер|шутер|гонк|шахмат|шашк|крестики|нолики|судоку|пятнашк|арканоид|раннер|кликер|виселица|морской бой|пинг-понг|пингпонг|флаппи|динозавр)/.test(low)) intent = 'game';
+    else if(/(нарисуй|сгенерируй|картинк|изображени|фотографи|рисунок|логотип|обои|портрет|пейзаж)/.test(low)) intent = 'img';
+    else if(/(напиши|код|функци|скрипт|программ|бот|сайт|парсер|калькулятор|сортиров|алгоритм|html|css|javascript|питон|python)/.test(low)) intent = 'code';
+    else if(/(реши|уравнен|задач|пример|посчитай|вычисли|математ|формул|сколько будет|теорем|интеграл|производн)/.test(low)) intent = 'math';
+    else if(/(пост|стать|письмо|эссе|сочинение|поздравлен|резюме|описание|текст|придумай|слоган|реклам|сценарий|историю|рассказ|стих)/.test(low)) intent = 'text';
+    else if(/(объясни|почему|зачем|как работает|что такое|расскажи)/.test(low)) intent = 'expl';
+    var G = {
+      game: [['в одном HTML-файле', 'на чистом JavaScript без библиотек', 'с адаптивом под телефон'], ['с красивым неоновым дизайном', 'в минималистичном стиле', 'с плавной анимацией', 'с тёмной темой'], ['с управлением стрелками и WASD', 'с сенсорным управлением', 'с управлением мышью'], ['со счётом очков и рекордом', 'с уровнями сложности', 'со звуковыми эффектами', 'с паузой и рестартом', 'с экраном Game Over']],
+      code: [['с комментариями к коду', 'с обработкой ошибок', 'с примером использования', 'готовый к запуску код'], ['разбей на функции', 'в одном файле', 'с пояснением ключевых мест'], ['и объясни как это работает', 'предложи 2 варианта решения']],
+      img: [['в стиле цифрового арта', 'фотореалистично', 'в стиле аниме', 'киберпанк', 'масляная живопись'], ['высокая детализация', 'красивое освещение', 'кинематографично', 'широкий план'], ['без текста и водяных знаков']],
+      math: [['реши пошагово', 'с проверкой ответа', 'с объяснением каждого шага'], ['в конце дай строку «Ответ: …»']],
+      text: [['в дружелюбном тоне', 'в деловом стиле', 'с юмором', 'простыми словами'], ['со структурой и заголовками', 'списком', 'объёмом до 1500 символов', 'с примерами']],
+      expl: [['объясни как новичку', 'с примерами из жизни', 'от простого к сложному', 'с аналогиями'], ['в конце — короткое резюме']],
+      gen: [['подробно', 'кратко и по делу', 'с примерами', 'пошагово', 'списком', 'с плюсами и минусами', 'объясни как новичку', 'сравни варианты', 'дай готовый ответ без воды', 'разбери все нюансы']]
+    };
+    var dims = G[intent] || G.gen;
+    function dup(opt){
+      try{
+        var w = opt.toLowerCase().replace(/^(в|на|с|со|без|от|к|под|для|и|по)\s+/, '').split(/[\s«»„“"']/)[0] || '';
+        w = w.replace(/[^а-яёa-z]/g, '');
+        if(w.length < 4) return false;
+        return low.indexOf(w) >= 0 || low.indexOf(w.slice(0, 6)) >= 0;
+      }catch(e){ return false; }
+    }
+    function low1(s){ return s.charAt(0).toLowerCase() + s.slice(1); }
+    var out = [], seen = {};
+    var di = 0, oi = 0, guard = 0;
+    while(out.length < 10 && guard < 80){
+      guard++;
+      var d = dims[di % dims.length];
+      var o = d[oi % d.length];
+      di++; if(di % dims.length === 0) oi++;
+      if(dup(o)) continue;
+      var s = t + ', ' + low1(o);
+      if(intent !== 'gen' && out.length % 3 === 2){
+        var d2 = dims[(di + 1) % dims.length];
+        var o2 = d2[(oi + 2) % d2.length];
+        if(!dup(o2) && o2 !== o){ s += ', ' + low1(o2); }
+      }
+      if(s.length > 150 || seen[s]) continue;
+      seen[s] = 1; out.push(s);
+    }
+    var u = G.gen[0], ui = 0;
+    while(out.length < 10 && ui < u.length * 2){
+      var o3 = u[ui % u.length]; ui++;
+      if(dup(o3)) continue;
+      var s2 = t + ', ' + o3;
+      if(s2.length > 150 || seen[s2]) continue;
+      seen[s2] = 1; out.push(s2);
+    }
+    return out;
+  }
+  function wmSuggRefresh(){
+    try{
+      var box = document.getElementById('wmSugg'); if(!box) return;
+      if(Date.now() < wmSuggMuteUntil){ box.style.display = 'none'; return; }
+      if(typeof isGenerating !== 'undefined' && isGenerating){ box.style.display = 'none'; return; }
+      var v = (typeof input !== 'undefined' && input.value) || '';
+      if(v.trim().length < 10){ box.style.display = 'none'; return; }
+      var vars = wmSuggBuild(v);
+      if(!vars.length){ box.style.display = 'none'; return; }
+      box.innerHTML = '';
+      vars.forEach(function(s){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'wm-sugg-chip'; b.textContent = s;
+        b.addEventListener('click', function(){
+          try{
+            input.value = s;
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          }catch(e){}
+          wmSuggMuteUntil = Date.now() + 2000;
+          wmSuggHide();
+          try{ input.focus(); }catch(e2){}
+        });
+        box.appendChild(b);
+      });
+      box.style.display = 'flex';
+    }catch(e){}
+  }
+  input.addEventListener('input', function(){ try{ clearTimeout(wmSuggTimer); wmSuggTimer = setTimeout(wmSuggRefresh, 350); }catch(e){} }); /* v65-promptboost */
 
   input.addEventListener('keydown', (e) => {
     if(e.key === 'Enter' && !e.shiftKey){
@@ -3875,6 +3971,7 @@ function wmThinkStart(bubble){
   }
 
   async function handleSend(){
+    try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
     const text = input.value.trim();
     const images = pendingImages.slice();
     if(!text && images.length === 0) return;
