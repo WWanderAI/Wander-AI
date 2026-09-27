@@ -2156,6 +2156,9 @@ main#chat{scroll-behavior:smooth;}
   let isGenerating = false;
   let activeStreamController = null;
   let manualStop = false;
+  let wmGenId = 0; /* v63-stopgo: поколение генерации */
+  let wmPendingEl = null; /* v63-stopgo */
+  let wmRunner = null; /* v63-stopgo: chat|web|image|video */
 
   const SEND_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
   const STOP_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>';
@@ -2168,11 +2171,48 @@ main#chat{scroll-behavior:smooth;}
     sendBtn.innerHTML = state ? STOP_ICON_SVG : SEND_ICON_SVG;
   }
 
-  function stopGeneration(){
-    if(activeStreamController){
-      manualStop = true;
-      activeStreamController.abort();
-    }
+  function stopGeneration(){ /* v63-stopgo: мгновенный стоп */
+    wmGenId++;
+    manualStop = true;
+    try{ if(activeStreamController) activeStreamController.abort(); }catch(eAB){}
+    try{
+      var pel = wmPendingEl; wmPendingEl = null;
+      if(pel && pel.isConnected){
+        if(wmRunner === 'chat'){ wmMakeStopped(pel); }
+        else { pel.remove(); }
+      }
+    }catch(eSU){}
+    wmRunner = null;
+    setGenerating(false);
+    sendBtn.disabled = false;
+  }
+  function wmMakeStopped(pel){ /* v63-stopgo: плашка «Остановлено» + кнопка продолжить */
+    try{ pel.classList.remove('pending'); }catch(e1){}
+    try{ var th = pel.querySelector('.wm-think'); if(th) th.remove(); }catch(e2){}
+    var en = false;
+    try{ en = window.__wandexEn === true; }catch(e3){}
+    try{
+      var tx = pel.querySelector('.msg-text');
+      if(tx) tx.textContent = en ? '\u23F9 Stopped' : '\u23F9 \u041E\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E';
+    }catch(e4){}
+    try{
+      var old = pel.querySelector('.msg-actions'); if(old) old.remove();
+      var bar = document.createElement('div');
+      bar.className = 'msg-actions'; bar.style.justifyContent = 'center';
+      var cb = document.createElement('button');
+      cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><span>' + (en ? 'Continue' : '\u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C') + '</span>';
+      cb.addEventListener('click', function(){
+        try{ pel.remove(); }catch(e5){}
+        var en2 = false;
+        try{ en2 = window.__wandexEn === true; }catch(e6){}
+        sendBtn.disabled = true;
+        var np = addMessage('ai', en2 ? 'Wandex is thinking\u2026' : 'Wandex \u043F\u0440\u043E\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442 \u043C\u0430\u0440\u0448\u0440\u0443\u0442 \u0437\u0430\u043D\u043E\u0432\u043E\u2026', { pending: true });
+        runCompletion(np).then(function(){ sendBtn.disabled = false; });
+      });
+      bar.appendChild(cb); pel.appendChild(bar);
+    }catch(e7){}
+    try{ pel.dataset.wmStopped = '1'; }catch(e8){}
+    try{ chat.scrollTop = chat.scrollHeight; }catch(e9){}
   }
   let history = [];
   let pendingImages = []; // { media_type, data (base64), previewUrl }
@@ -3660,6 +3700,7 @@ function wmThinkStart(bubble){
     try{ wmThinkStart(pendingEl); }catch(eT){}
     setGenerating(true);
     manualStop = false;
+    var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'chat'; /* v63-stopgo */
     try{
       const mode = MODES[currentMode];
       const openAiMessages = toOpenAiMessages(trimHistory(history), mode.system);
@@ -3682,7 +3723,7 @@ function wmThinkStart(bubble){
       for(var __oi = 0; __oi < CHAT_MODELS.length; __oi++){ __mdlQ.push({ u: OPENROUTER_CHAT_URL, k: OPENROUTER_KEY, m: CHAT_MODELS[__oi], g: 0 }); }
       for(var MDLtry = 0; MDLtry < 2 && !response; MDLtry++){ /* v49-models: 2 прохода по моделям */
       if(MDLtry > 0){ lastNetErr = null; await new Promise(function(r){ setTimeout(r, 4000); }); }
-      for(var MDLi = 0; MDLi < __mdlQ.length; MDLi++){ var __qe = __mdlQ[MDLi];
+      for(var MDLi = 0; MDLi < __mdlQ.length; MDLi++){ var __qe = __mdlQ[MDLi]; if(myGen !== wmGenId) return; /* v63-stopgo */
         try{ try{ if(__qe.g){ window.__wmLastVia = 'gemini'; } else if(__qe.t){ window.__wmLastVia = 'mistral'; } }catch(eV){}
           response = await fetch(__qe.u, {
             method: 'POST',
@@ -3762,8 +3803,8 @@ function wmThinkStart(bubble){
 
       clearTimeout(timeoutId);
 
-      if(manualStop){
-        pendingEl.remove();
+      if(myGen !== wmGenId || manualStop){ /* v63-stopgo */
+        if(!pendingEl.dataset.wmStopped){ try{ pendingEl.remove(); }catch(ePR){} }
         return;
       }
 
@@ -3808,6 +3849,7 @@ function wmThinkStart(bubble){
       playNotifySound();
 
     }catch(err){
+      if(myGen !== wmGenId){ if(!pendingEl.dataset.wmStopped){ try{pendingEl.remove();}catch(eOR){} } return; } /* v63-stopgo */
       const __gone = __wmGone(pendingEl, typeof sendChatId === 'undefined' ? activeChatId : sendChatId);
       pendingEl.remove();
       if(__gone){ return; }
@@ -3827,8 +3869,7 @@ function wmThinkStart(bubble){
       errEl.appendChild(bar);
     }finally{
       chat.scrollTop = chat.scrollHeight;
-      activeStreamController = null;
-      manualStop = false;
+      if(myGen === wmGenId){ activeStreamController = null; manualStop = false; } /* v63-stopgo */
       setGenerating(false);
     }
   }
@@ -4036,6 +4077,7 @@ function wmThinkStart(bubble){
     const sendChatId = activeChatId;
     setGenerating(true);
     manualStop = false;
+    var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'web'; /* v63-stopgo */
     const skel = wmImageSkeleton(pendingEl);
     const controller = new AbortController();
     activeStreamController = controller;
@@ -4068,7 +4110,7 @@ function wmThinkStart(bubble){
       for(var __oi = 0; __oi < CHAT_MODELS.length; __oi++){ __mdlQ.push({ u: OPENROUTER_CHAT_URL, k: OPENROUTER_KEY, m: CHAT_MODELS[__oi], g: 0 }); }
       for(var MDLtry2 = 0; MDLtry2 < 2 && !response; MDLtry2++){ /* v49-models: 2 прохода */
       if(MDLtry2 > 0){ await new Promise(function(r){ setTimeout(r, 4000); }); }
-      for(var MDLi = 0; MDLi < __mdlQ.length; MDLi++){ var __qe = __mdlQ[MDLi];
+      for(var MDLi = 0; MDLi < __mdlQ.length; MDLi++){ var __qe = __mdlQ[MDLi]; if(myGen !== wmGenId) return; /* v63-stopgo */
         try{ try{ if(__qe.g){ window.__wmLastVia = 'gemini'; } else if(__qe.t){ window.__wmLastVia = 'mistral'; } }catch(eV){}
           payload.model = __qe.m;
           if(__qe.g || __qe.t){ delete payload.reasoning; } else if(!payload.reasoning){ payload.reasoning = { enabled: false }; }
@@ -4097,7 +4139,7 @@ function wmThinkStart(bubble){
       }
       const data = await response.json();
       clearTimeout(timeoutId);
-      if(manualStop){ pendingEl.remove(); return; }
+      if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(ePR){} return; } /* v63-stopgo */
       let reply = extractGenApiText(data);
       if(!reply){ throw new Error('пустой ответ'); }
       reply = stripTrailingPeriod(reply.trim());
@@ -4123,12 +4165,13 @@ function wmThinkStart(bubble){
       addAiActions(pendingEl, reply, true);
       saveState();
     }catch(eS){
+      if(myGen !== wmGenId) return; /* v63-stopgo */
       clearTimeout(timeoutId);
       try{ pendingEl.remove(); }catch(e4){}
       if(!__wmGone(pendingEl, sendChatId)){ addMessage('error', '🌐 Поиск не удался: ' + (eS && eS.message ? eS.message : 'нет соединения') + '. Попробуй ещё раз.'); }
     }finally{
       setGenerating(false);
-      activeStreamController = null;
+      if(myGen === wmGenId){ activeStreamController = null; } /* v63-stopgo */
     }
   }
 
@@ -4171,6 +4214,7 @@ function wmThinkStart(bubble){
     const sendChatId = activeChatId;
     setGenerating(true);
     manualStop = false;
+    var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'image'; /* v63-stopgo */
     const skel = wmImageSkeleton(pendingEl);
     const controller = new AbortController();
     activeStreamController = controller;
@@ -4202,7 +4246,7 @@ function wmThinkStart(bubble){
       try{
         response = await fetch(url, { signal: controller.signal });
       }catch(fetchErr){
-        if(fetchErr.name === 'AbortError' && manualStop){
+        if(myGen !== wmGenId || (fetchErr.name === 'AbortError' && manualStop)){ /* v63-stopgo */
           pendingEl.remove();
           return;
         }
@@ -4278,6 +4322,7 @@ function wmThinkStart(bubble){
       dl.style.cssText = 'display:inline-block;font-size:11px;color:var(--amber);margin-top:6px;text-decoration:none;';
       textEl.appendChild(dl);
 
+      if(myGen !== wmGenId) return; /* v63-stopgo */
       sessionGallery.unshift({ url: imageUrl, prompt: prompt, time: Date.now() });
       wmImageCooldownStart();
 
@@ -4287,12 +4332,12 @@ function wmThinkStart(bubble){
       chat.scrollTop = chat.scrollHeight;
 
     }catch(err){
+      if(myGen !== wmGenId){ try{pendingEl.remove();}catch(eOR){} return; } /* v63-stopgo */
       pendingEl.remove();
       if(!__wmGone(pendingEl, sendChatId)){ addMessage('error', 'Не удалось получить картинку: ' + err.message, { error: true }); }
     }finally{
       clearTimeout(timeoutId);
-      activeStreamController = null;
-      manualStop = false;
+      if(myGen === wmGenId){ activeStreamController = null; manualStop = false; } /* v63-stopgo */
       setGenerating(false);
     }
   }
@@ -4355,6 +4400,7 @@ function wmThinkStart(bubble){
     const sendChatId = activeChatId;
     setGenerating(true);
     manualStop = false;
+    var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'video'; /* v63-stopgo */
     const controller = new AbortController();
     activeStreamController = controller;
     const VIDEO_TIMEOUT_MS = 5 * 60 * 1000; // видео генерируется дольше текста — даём 5 минут
@@ -4373,7 +4419,7 @@ function wmThinkStart(bubble){
         let imgResp;
         try{ imgResp = await fetch(imgUrl, { signal: controller.signal }); }
         catch(fe){
-          if(fe.name === 'AbortError' && manualStop){ pendingEl.remove(); return; }
+          if(myGen !== wmGenId || (fe.name === 'AbortError' && manualStop)){ try{pendingEl.remove();}catch(ePR){} return; } /* v63-stopgo */
           if(fe.name === 'AbortError'){ throw new Error('Генерация заняла слишком много времени. Попробуй ещё раз.'); }
           throw new Error('Нет соединения с сервером. Проверь интернет и попробуй ещё раз.');
         }
@@ -4392,7 +4438,7 @@ function wmThinkStart(bubble){
       try{
         response = await fetch(url, { signal: controller.signal });
       }catch(fetchErr){
-        if(fetchErr.name === 'AbortError' && manualStop){
+        if(myGen !== wmGenId || (fetchErr.name === 'AbortError' && manualStop)){ /* v63-stopgo */
           pendingEl.remove();
           return;
         }
@@ -4435,6 +4481,7 @@ function wmThinkStart(bubble){
       hint.textContent = 'Видео доступно только в этой сессии — скачай, если хочешь сохранить (не переживает перезагрузку страницы).';
       textEl.appendChild(hint);
 
+      if(myGen !== wmGenId) return; /* v63-stopgo */
       if(__wmGone(pendingEl, sendChatId)){ __wmSavebg(sendChatId, { role: 'assistant', content: '[видео сгенерировано]' }); playNotifySound(); return; }
       history.push({ role: 'assistant', content: '[видео сгенерировано: "' + String(prompt).slice(0, 140) + '" — не сохраняется между сессиями]' });
       saveState();
@@ -4445,8 +4492,7 @@ function wmThinkStart(bubble){
       if(!manualStop && !__wmGone(pendingEl, sendChatId)) addMessage('error', 'Не удалось получить видео: ' + err.message, { error: true });
     }finally{
       clearTimeout(timeoutId);
-      activeStreamController = null;
-      manualStop = false;
+      if(myGen === wmGenId){ activeStreamController = null; manualStop = false; } /* v63-stopgo */
       setGenerating(false);
     }
   }
