@@ -2952,14 +2952,14 @@ main#chat{scroll-behavior:smooth;}
     const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     try{
-      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      const response = await fetch(MISTRAL_CHAT_URL, { /* v64-bugfix: через релей — direct мёртв на телефоне */
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + THEME_API_KEY
+          'Authorization': 'Bearer ' + MISTRAL_KEY /* v64-bugfix */
         },
         body: JSON.stringify({
-          model: 'mistral-small-latest',
+          model: MISTRAL_MODELS[0], /* v64-bugfix: рабочая ministral вместо 429 small */
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: desc }
@@ -3988,16 +3988,16 @@ function wmThinkStart(bubble){
   async function translatePromptToEnglish(text){
     try{
       const payload = {
-        model: 'mistral-small-latest',
+        model: MISTRAL_MODELS[0], /* v64-bugfix: рабочая ministral вместо 429 small */
         messages: [
           { role: 'system', content: 'Translate the user\'s message into a short, vivid English prompt suitable for an AI image generator. Output ONLY the translated prompt, nothing else — no quotes, no explanations.' },
           { role: 'user', content: text }
         ],
         max_tokens: 120
       };
-      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      const response = await fetch(MISTRAL_CHAT_URL, { /* v64-bugfix: через релей — direct мёртв на телефоне */
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TRANSLATE_API_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + MISTRAL_KEY /* v64-bugfix */ },
         body: JSON.stringify(payload)
       });
       if(!response.ok) return text;
