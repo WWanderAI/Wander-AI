@@ -1559,6 +1559,36 @@ header button:active,.mode-btn:active,.msg-actions button:active,.shop-mini:acti
 main#chat{scroll-behavior:smooth;}
 #planChip.pro{position:relative;overflow:hidden;}
 #planChip.pro::after{content:'';position:absolute;top:-20%;bottom:-20%;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:wmShine 3.2s ease-in-out infinite;}
+
+  /* v67-design: плавность и лоск */
+  .msg{
+    border-radius:14px;
+    box-shadow:0 4px 16px rgba(0,0,0,.35);
+    animation:wmMsgIn .38s cubic-bezier(.22,.8,.3,1) both;
+  }
+  @keyframes wmMsgIn{
+    from{ opacity:0; transform:translateY(12px) scale(.98); }
+    to{ opacity:1; transform:none; }
+  }
+  .msg img{ border-radius:12px; }
+  button{ transition:transform .15s ease, background-color .2s ease, color .2s ease, box-shadow .2s ease; }
+  button:active{ transform:scale(.9); }
+  #send{
+    transition:transform .15s ease, box-shadow .25s ease, filter .25s ease;
+    box-shadow:0 2px 12px rgba(180,134,62,.4);
+  }
+  #send:hover{ filter:brightness(1.1); }
+  #send:active{ transform:scale(.88); }
+  #send:disabled{ box-shadow:none; filter:grayscale(.4); }
+  .input-row{ transition:border-color .25s ease, box-shadow .25s ease; }
+  .input-row:focus-within{ border-color:var(--amber); box-shadow:0 0 0 3px rgba(180,134,62,.22); }
+  .chat-drawer{ transition:transform .32s cubic-bezier(.22,.8,.3,1); }
+  .drawer-overlay{ transition:opacity .3s ease; }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--amber-dim); border-radius:8px; }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--amber); }
+  *{ scrollbar-width:thin; scrollbar-color:var(--amber-dim) transparent; }
 </style>
 </head>
 <body>
