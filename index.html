@@ -548,7 +548,8 @@ return chain(0);
     padding:2px 0 2px 14px;
     border-radius:0;
   }
-  .msg.ai.pending{color:var(--text-dim);font-style:italic;}
+  .msg.ai.pending{color:var(--text-dim);font-style:italic;animation:wmMsgIn .38s cubic-bezier(.22,.8,.3,1) both, wmThinkPulse 1.8s ease-in-out .4s infinite;}
+  @keyframes wmThinkPulse{0%,100%{opacity:.6}50%{opacity:1}} /* v68-think */
   .msg.error{
     align-self:center;
     background:rgba(168,82,58,0.12);
@@ -3655,7 +3656,51 @@ main#chat{scroll-behavior:smooth;}
   }
 
 
-  function addMessage(role, text, opts={}){
+    /* v68-think: живые статусы думанья */
+  var WM_THINK = {
+    chat: { ru: ['Думаю…','Прокладываю маршрут…','Советуюсь с серверами…','Разминаю нейроны…','Читаю вопрос второй раз…','Собираю слова в кучу…','Полирую мысли…','Шепчусь с базой знаний…','Раскладываю всё по полочкам…','Включаю турбо-мозг…','Подбираю лучшие слова…','Сдуваю пыль с ответа…','Заглядываю в шпаргалки…','Почти готово…'],
+            en: ['Thinking…','Plotting the route…','Consulting the servers…','Warming up neurons…','Reading your question twice…','Gathering the words…','Polishing thoughts…','Turbo-brain on…','Almost there…'] },
+    img: { ru: ['Рисуем картинку…','Смешиваем краски…','Наводим резкость…','Добавляем волшебства…'],
+           en: ['Painting the picture…','Mixing colors…','Sharpening details…','Adding magic…'] },
+    search: { ru: ['Ищу в интернете…','Листаю страницы…','Спрашиваю у поисковика…','Проверяю источники…'],
+              en: ['Searching the web…','Flipping pages…','Asking the search engine…','Checking sources…'] },
+    video: { ru: ['Генерируем видео…','Рисуем кадры…','Склеиваем сцены…','Это займёт пару минут…'],
+             en: ['Generating video…','Drawing frames…','Stitching scenes…','This takes a couple minutes…'] }
+  };
+  function wmThinkStart(el){
+    try{
+      if(!el || el._wmThinkOn) return; el._wmThinkOn = true;
+      var en = false;
+      try{ en = window.__wandexEn === true; }catch(e0){}
+      var first = '';
+      try{ first = el.textContent || ''; }catch(e1){}
+      var pool = 'chat';
+      if(/рису|картин|paint/i.test(first)) pool = 'img';
+      else if(/интернет|поиск|search/i.test(first)) pool = 'video' === pool ? pool : 'search';
+      else if(/видео|video/i.test(first)) pool = 'video';
+      var arr = (WM_THINK[pool] && WM_THINK[pool][en ? 'en' : 'ru']) || WM_THINK.chat.ru;
+      var last = first, ticks = 0;
+      try{ el.textContent = arr[Math.floor(Math.random() * arr.length)]; last = el.textContent; }catch(e2){}
+      var timer = setInterval(function(){
+        try{
+          ticks++;
+          if(ticks > 40 || !document.contains(el) || !el.classList.contains('pending') || el.textContent !== last){ clearInterval(timer); return; }
+          var nxt = arr[Math.floor(Math.random() * arr.length)];
+          if(nxt === last && arr.length > 1) nxt = arr[(arr.indexOf(last) + 1) % arr.length];
+          el.textContent = nxt; last = nxt;
+        }catch(e3){ try{ clearInterval(timer); }catch(e4){} }
+      }, 2400);
+    }catch(e5){}
+  }
+  try{
+    var __wmAddMessageOrig = addMessage;
+    addMessage = function(role, text, opts){
+      var el = __wmAddMessageOrig(role, text, opts);
+      try{ if(opts && opts.pending) wmThinkStart(el); }catch(e6){}
+      return el;
+    };
+  }catch(e7){}
+function addMessage(role, text, opts={}){
     if(role === 'user' && !opts.markdown){
       try{
         let __s = String(text == null ? '' : text);
