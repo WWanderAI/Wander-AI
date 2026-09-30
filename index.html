@@ -549,6 +549,13 @@ return chain(0);
     border-radius:0;
   }
   .msg.ai.pending{color:var(--text-dim);font-style:italic;animation:wmMsgIn .38s cubic-bezier(.22,.8,.3,1) both, wmThinkPulse 1.8s ease-in-out .4s infinite;}
+.msg.pending::before{content:'';display:inline-block;width:24px;height:24px;vertical-align:-6px;align-self:center;background:no-repeat center/contain url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='none' stroke='%23B4863E' stroke-width='1.6'/><path d='M12 3.5v3.6M12 17v3.5M3.5 12h3.6M16.9 12h3.6' stroke='%23B4863E' stroke-width='1.6' stroke-linecap='round'/></svg>");} /* v80-compass */
+.msg.pending::after{content:'';display:inline-block;width:24px;height:24px;vertical-align:-6px;align-self:center;margin-left:-24px;margin-right:10px;background:no-repeat center/contain url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 4.5L14.4 12h-4.8z' fill='%23D64545'/><path d='M12 19.5L9.6 12h4.8z' fill='%239AA0B4'/><circle cx='12' cy='12' r='1.7' fill='%23B4863E' stroke='%231A1A1A' stroke-width='0.6'/></svg>");animation:wmNeedleSeek 2.6s ease-in-out infinite;} /* v80-compass */
+@keyframes wmNeedleSeek{0%{transform:rotate(-55deg);}25%{transform:rotate(38deg);}50%{transform:rotate(-24deg);}75%{transform:rotate(10deg);}100%{transform:rotate(-55deg);}} /* v80-compass */
+.msg.pending{display:flex;align-items:center;} /* v82-autoretry */
+.msg.pending::before{flex:none;} /* v82-autoretry */
+.msg.pending::after{flex:none;} /* v82-autoretry */
+.msg.pending>.msg-text{min-width:0;} /* v82-autoretry */
   @keyframes wmThinkPulse{0%,100%{opacity:.6}50%{opacity:1}} /* v68-think */
   .msg.error{
     align-self:center;
@@ -3716,14 +3723,14 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
       else if(/видео|video/i.test(first)) pool = 'video';
       var arr = (WM_THINK[pool] && WM_THINK[pool][en ? 'en' : 'ru']) || WM_THINK.chat.ru;
       var last = first, ticks = 0;
-      try{ el.textContent = arr[Math.floor(Math.random() * arr.length)]; last = el.textContent; }catch(e2){}
+      try{ (el.querySelector('.msg-text')||el).textContent = arr[Math.floor(Math.random() * arr.length)]; last = el.textContent; }catch(e2){}
       var timer = setInterval(function(){
         try{
           ticks++;
           if(ticks > 40 || !document.contains(el) || !el.classList.contains('pending') || el.textContent !== last){ clearInterval(timer); return; }
           var nxt = arr[Math.floor(Math.random() * arr.length)];
           if(nxt === last && arr.length > 1) nxt = arr[(arr.indexOf(last) + 1) % arr.length];
-          el.textContent = nxt; last = nxt;
+          (el.querySelector('.msg-text')||el).textContent = nxt; last = nxt;
         }catch(e3){ try{ clearInterval(timer); }catch(e4){} }
       }, 2400);
     }catch(e5){}
@@ -3981,7 +3988,7 @@ function wmThinkStart(bubble){
 
       let response = null;
       let lastNetErr = null;
-      let lastStatus = 0;
+      let lastStatus = 0; window.__wmEmptyN = 0; /* v81-chainfix */
       var __mdlQ = [];
       for(var __ti = 0; __ti < MISTRAL_MODELS.length; __ti++){ __mdlQ.push({ u: MISTRAL_CHAT_URL, k: MISTRAL_KEY, m: MISTRAL_MODELS[__ti], t: 1 }); } /* v57-mistral */
       for(var __gi = 0; __gi < GEMINI_MODELS.length; __gi++){ __mdlQ.push({ u: GEMINI_CHAT_URL, k: GEMINI_KEY, m: GEMINI_MODELS[__gi], g: 1 }); }
@@ -4013,6 +4020,14 @@ function wmThinkStart(bubble){
             signal: controller.signal
           });
           if(response.status === 429 || response.status === 404 || response.status === 401 || response.status === 400 || response.status >= 500){ lastStatus = response.status; /* v59-no401 */ try{ var __djT = await response.clone().text(); var __hh = '?'; try{ __hh = new URL(__qe.u).host; }catch(eH){} var __lg = (__qe.m + '@' + __hh + ' ' + response.status + ' ' + __djT.slice(0, 90)).replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lg).slice(-420); }catch(eDg){} response = null; continue; } /* v56-netdiag2 */
+          try{ /* v81-chainfix: 200-пустышка — пропускаем модель, а не роняем цепочку */
+            var __bt = await response.clone().text();
+            if(!wmChainParse(__bt)){
+              window.__wmEmptyN = (window.__wmEmptyN || 0) + 1;
+              try{ var __lgE = (__qe.m + ' 200empty').replace(/\s+/g, ' '); window.__wmSkipLog = ((window.__wmSkipLog ? window.__wmSkipLog + ' || ' : '') + __lgE).slice(-420); }catch(eDg2){}
+              response = null; continue;
+            }
+          }catch(eCE){ try{ window.__wmEmptyN = (window.__wmEmptyN || 0) + 1; }catch(eE){} response = null; continue; }
         }catch(fetchErr){
           if(fetchErr.name === 'AbortError'){
             clearTimeout(timeoutId);
@@ -4027,7 +4042,7 @@ function wmThinkStart(bubble){
         clearTimeout(timeoutId);
         if(lastNetErr){ throw new Error('Нет соединения (код ' + lastStatus + ').' + ' [skip:' + (window.__wmSkipLog || '-') + ']' + ' [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Проверь интернет и попробуй ещё раз.'); } /* v56-netdiag2 */
         if(lastStatus === 429){ throw new Error('Дневной бесплатный лимит исчерпан. Обновится утром около 05:00 — возвращайся! 🌙'); }
-        throw new Error('Модели заняты (' + (window.__wmLastVia || '?') + ' ' + lastStatus + ').' + ' [skip:' + (window.__wmSkipLog || '-') + ']' + ' [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Попробуй ещё раз через минуту.'); /* v56-netdiag2 */
+        if(window.__wmEmptyN > 0 && !lastNetErr){ clearTimeout(timeoutId); throw new Error('Модели вернули пустой ответ (' + window.__wmEmptyN + '). Попробуй ещё раз через минуту.'); } throw new Error('Модели заняты (' + (window.__wmLastVia || '?') + ' ' + lastStatus + ').' + ' [skip:' + (window.__wmSkipLog || '-') + ']' + ' [ntv:' + String(window.__wandexDiag || '-').slice(-200) + ']. Попробуй ещё раз через минуту.'); /* v56-netdiag2 */
       }
 
       if(response.status === 401){
@@ -4109,7 +4124,8 @@ function wmThinkStart(bubble){
         playNotifySound();
         return;
       }
-      const textEl = pendingEl.querySelector('.msg-text');
+      let textEl = pendingEl.querySelector('.msg-text');
+      if(!textEl){ pendingEl.textContent = ''; textEl = document.createElement('div'); textEl.className = 'msg-text'; pendingEl.appendChild(textEl); } /* v82-render-guard */
       pendingEl.classList.remove('pending');
       textEl.innerHTML = renderMarkdown(reply);
       history.push({ role: 'assistant', content: reply });
@@ -4122,6 +4138,20 @@ function wmThinkStart(bubble){
       const __gone = __wmGone(pendingEl, typeof sendChatId === 'undefined' ? activeChatId : sendChatId);
       pendingEl.remove();
       if(__gone){ return; }
+      var __autoN = Number((pendingEl && pendingEl.dataset && pendingEl.dataset.wmAuto) || 0);
+      if(wmShouldAutoRetry(err && err.message, __autoN)){ /* v82-autoretry: временный сбой — молча пробуем заново */
+        try{ pendingEl.textContent = 'Пробую ещё раз…'; }catch(eAT){}
+        var __waitMs = __autoN === 0 ? 2500 : 6000;
+        var __t0 = Date.now();
+        while(Date.now() - __t0 < __waitMs){ if(myGen !== wmGenId) break; await new Promise(function(r){ setTimeout(r, 300); }); }
+        if(myGen !== wmGenId){ if(!pendingEl.dataset.wmStopped){ try{ pendingEl.remove(); }catch(eOR2){} } return; }
+        if(__wmGone(pendingEl, typeof sendChatId === 'undefined' ? activeChatId : sendChatId)) return;
+        try{ pendingEl.remove(); }catch(ePR2){}
+        const __np = addMessage('ai', 'Wandex прокладывает маршрут заново…', { pending: true });
+        __np.dataset.wmAuto = String(__autoN + 1);
+        await runCompletion(__np);
+        return;
+      }
       const errEl = addMessage('error', 'Не удалось получить ответ: ' + err.message, { error: true });
       const bar = document.createElement('div');
       bar.className = 'msg-actions';
@@ -4316,9 +4346,71 @@ function wmThinkStart(bubble){
       }
     }catch(e1){}
   }
+  function wmDraftRead(){ try{ if(typeof localStorage === 'undefined') return {}; return JSON.parse(localStorage.getItem('wandexDrafts') || '{}'); }catch(e){ return {}; } }
+  function wmDraftWrite(o){ try{ if(typeof localStorage === 'undefined') return; localStorage.setItem('wandexDrafts', JSON.stringify(o)); }catch(e){} }
+  function wmDraftScrub(sent){ /* v79-draftfix: отправленный текст — удалить из черновиков */
+    try{
+      var s = String(sent == null ? '' : sent).trim();
+      if(!s) return;
+      var o = wmDraftRead(), ch = false;
+      for(var k in o){ if(o[k] && String(o[k].v || '') === s){ delete o[k]; ch = true; } }
+      if(ch) wmDraftWrite(o);
+    }catch(e){}
+  }
+  function wmDraftPurgeStale(){ /* v79-draftfix: снести сирот — черновики, совпадающие с отправленными */
+    try{
+      if(typeof localStorage === 'undefined') return;
+      var sent = {}, n = 0;
+      var add = function(x){ var s = String(x == null ? '' : x).trim(); if(s){ sent[s] = 1; n++; } };
+      try{
+        for(var i = 0; i < localStorage.length; i++){
+          var key = localStorage.key(i);
+          if(!key || key.indexOf('wandex_chats_v1') !== 0) continue;
+          var d = JSON.parse(localStorage.getItem(key) || 'null');
+          var arr = d ? (Array.isArray(d) ? d : (d.chats || [])) : [];
+          for(var c = 0; c < arr.length; c++){
+            var h = arr[c] && arr[c].history;
+            if(!Array.isArray(h)) continue;
+            for(var e = 0; e < h.length; e++){
+              if(!h[e] || h[e].role !== 'user') continue;
+              var cb = h[e].content;
+              if(typeof cb === 'string'){ add(cb); continue; }
+              if(!Array.isArray(cb)) continue;
+              for(var b = 0; b < cb.length; b++){ if(cb[b] && cb[b].type === 'text') add(cb[b].text); }
+            }
+          }
+        }
+      }catch(e0){}
+      try{
+        if(typeof document !== 'undefined'){
+          var els = document.querySelectorAll('#chat .msg.user .msg-text');
+          for(var q = 0; q < els.length; q++) add(els[q].textContent);
+        }
+      }catch(e1){}
+      if(!n) return;
+      var o = wmDraftRead(), ch = false;
+      for(var k in o){ if(o[k] && sent[String(o[k].v || '').trim()]){ delete o[k]; ch = true; } }
+      if(ch) wmDraftWrite(o);
+    }catch(e){}
+  }
+  try{ setTimeout(function(){ try{ wmDraftPurgeStale(); }catch(e){} }, 2500); }catch(e){} /* v79-draftfix */
+  function wmChainParse(txt){ /* v81-chainfix: разбор тела внутри цепочки; пустая строка = пустышка */
+    try{
+      var d = JSON.parse(txt);
+      var x = '';
+      try{ x = extractGenApiText(d); }catch(e){ x = ''; }
+      return x || '';
+    }catch(e){ return ''; }
+  }
+  function wmShouldAutoRetry(msg, n){ /* v82-autoretry */
+    try{
+      if((Number(n) || 0) >= 2) return false;
+      return /пустой ответ|Модели заняты|Не удалось разобрать ответ сервера|Нет соединения|Сеть ответила с ошибкой|Сервер временно недоступен/.test(String(msg || ''));
+    }catch(e){ return false; }
+  }
 async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
-    try{ window.__wmCmdMod = ''; var __cp = wmCmdParse(input.value || ''); if(__cp && __cp.local){ addMessage('ai', __cp.local, {}); input.value = ''; input.style.height = 'auto'; return; } if(__cp && __cp.rest === '' && !__cp.wrapped){ if(pendingImages.length === 0){ addMessage('ai', __cp.usage, {}); input.value = ''; input.style.height = 'auto'; return; } } if(__cp && __cp.wrapped){ window.__wmCmdMod = __cp.mod; input.value = __cp.wrapped; } else if(__cp && __cp.mod){ window.__wmCmdMod = __cp.mod; } }catch(eWC){} /* v74-slashcmd */
+    try{ window.__wmCmdMod = ''; var __cp = wmCmdParse(input.value || ''); if(__cp && __cp.local){ addMessage('ai', __cp.local, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } if(__cp && __cp.rest === '' && !__cp.wrapped){ if(pendingImages.length === 0){ addMessage('ai', __cp.usage, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } } if(__cp && __cp.wrapped){ window.__wmCmdMod = __cp.mod; input.value = __cp.wrapped; } else if(__cp && __cp.mod){ window.__wmCmdMod = __cp.mod; } }catch(eWC){} /* v74-slashcmd */
     const text = input.value.trim();
     const images = pendingImages.slice();
     if(!text && images.length === 0) return;
@@ -4343,7 +4435,7 @@ async function handleSend(){
       addUserActions(userDiv, rawPrompt, userIndex);
       saveState();
 
-      input.value = '';
+      wmDraftScrub(input.value); input.value = '';
       input.style.height = 'auto';
       sendBtn.disabled = true;
 
@@ -4362,7 +4454,7 @@ async function handleSend(){
       userDiv.dataset.historyIndex = userIndex;
       addUserActions(userDiv, text, userIndex);
       saveState();
-      input.value = '';
+      wmDraftScrub(input.value); input.value = '';
       input.style.height = 'auto';
       sendBtn.disabled = true;
       const pendingEl = addMessage('ai', 'Ищу в интернете…', { pending: true });
@@ -4390,7 +4482,7 @@ async function handleSend(){
       addUserActions(userDiv, text, userIndex);
       saveState();
 
-      input.value = '';
+      wmDraftScrub(input.value); input.value = '';
       input.style.height = 'auto';
       sendBtn.disabled = true;
 
@@ -4415,7 +4507,7 @@ async function handleSend(){
     addUserActions(userDiv, text, userIndex);
     saveState();
 
-    input.value = '';
+    wmDraftScrub(input.value); input.value = '';
     input.style.height = 'auto';
     pendingImages = [];
     renderAttachPreview();
