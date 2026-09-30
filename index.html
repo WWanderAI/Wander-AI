@@ -2459,7 +2459,7 @@ main#chat{scroll-behavior:smooth;}
     const wmFenceStash = [];
     s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => { wmFenceStash.push('<pre data-lang="' + ((lang || 'text').toLowerCase()) + '"><code>' + code.trim() + '</code></pre>'); return '\u0000WMFENCE' + (wmFenceStash.length - 1) + '\u0000'; });
         const wmTableStash = []; /* v75-rich */
-    s = s.replace(/(?:^[ \t]*\|.*(?:\n|$)){2,}/gm, function(block){
+    s = s.replace(/(?:^[^\n]*\|[^\n]*(?:\n|$)){2,}/gm, function(block){ /* v76-tablefix: без внешних черточек тоже */
       var rows = block.trim().split('\n').map(function(ln){ return ln.trim().replace(/^\||\|$/g, '').split('|').map(function(c){ return c.trim(); }); });
       if(rows.length < 2) return block;
       if(!rows[1].every(function(c){ return /^:?-+:?$/.test(c); })) return block;
@@ -4275,17 +4275,7 @@ function wmThinkStart(bubble){
         pre.parentNode.insertBefore(wrap, pre);
         wrap.appendChild(bar); wrap.appendChild(pre); wrap.appendChild(out);
       });
-      chat.querySelectorAll('.msg.ai .wm-table').forEach(function(w){
-        if(w.getAttribute('data-wm-rich') === '1') return;
-        w.setAttribute('data-wm-rich', '1');
-        var bar = document.createElement('div'); bar.className = 'wm-rich-bar';
-        var lb = document.createElement('span'); lb.textContent = 'Таблица';
-        var sp = document.createElement('span'); sp.className = 'wm-spacer';
-        var bCsv = wmBarBtn('CSV', function(){ wmTableExp(w, 'csv', bCsv); });
-        var bXls = wmBarBtn('Excel', function(){ wmTableExp(w, 'xls', bXls); });
-        bar.appendChild(lb); bar.appendChild(sp); bar.appendChild(bCsv); bar.appendChild(bXls);
-        w.insertBefore(bar, w.firstChild);
-      });
+      /* v77-minitable: таблицы без кнопок — просто мини-таблица в чате */
     }catch(e){}
   }
 async function handleSend(){
