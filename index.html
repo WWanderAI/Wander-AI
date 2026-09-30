@@ -2115,6 +2115,8 @@ main#chat{scroll-behavior:smooth;}
     'google/gemma-4-31b-it:free',
     'qwen/qwen3.8-27b:free',
     'poolside/laguna-xs-2.1:free', /* v49-models */
+    'google/gemma-4-26b-a4b-it:free', /* v78-vision */
+    'dots-studio/dots-3-note-preview:free', /* v78-vision */
     'inclusionai/ling-3.0-flash-sante:free'
   ];
   /* v54-gemini: ключ юзера из Google AI Studio (проверен живьём 26.09) */
@@ -3966,6 +3968,7 @@ function wmThinkStart(bubble){
           }
         }
       }catch(eER){}
+      try{ wmVisionFix(openAiMessages); }catch(eVF){} /* v78-vision */
 
       const controller = new AbortController();
       activeStreamController = controller;
@@ -3983,6 +3986,10 @@ function wmThinkStart(bubble){
       for(var __ti = 0; __ti < MISTRAL_MODELS.length; __ti++){ __mdlQ.push({ u: MISTRAL_CHAT_URL, k: MISTRAL_KEY, m: MISTRAL_MODELS[__ti], t: 1 }); } /* v57-mistral */
       for(var __gi = 0; __gi < GEMINI_MODELS.length; __gi++){ __mdlQ.push({ u: GEMINI_CHAT_URL, k: GEMINI_KEY, m: GEMINI_MODELS[__gi], g: 1 }); }
       for(var __oi = 0; __oi < CHAT_MODELS.length; __oi++){ __mdlQ.push({ u: OPENROUTER_CHAT_URL, k: OPENROUTER_KEY, m: CHAT_MODELS[__oi], g: 0 }); }
+      try{ /* v78-vision: с картинкой — только зрячие модели */
+        var __hasImg = openAiMessages.some(function(m){ return m && m.role === 'user' && m.content && m.content.some && m.content.some(function(x){ return x && (x.type === 'image_url' || x.type === 'image'); }); });
+        __mdlQ = wmVisionQueue(__mdlQ, __hasImg);
+      }catch(eVQ){}
       for(var MDLtry = 0; MDLtry < 2 && !response; MDLtry++){ /* v49-models: 2 прохода по моделям */
       if(MDLtry > 0){ lastNetErr = null; await new Promise(function(r){ setTimeout(r, 4000); }); }
       for(var MDLi = 0; MDLi < __mdlQ.length; MDLi++){ var __qe = __mdlQ[MDLi]; if(myGen !== wmGenId) return; /* v63-stopgo */
@@ -4277,6 +4284,37 @@ function wmThinkStart(bubble){
       });
       /* v77-minitable: таблицы без кнопок — просто мини-таблица в чате */
     }catch(e){}
+  }
+  var WM_VISION_RANK = { 'google/gemma-4-31b-it:free': 0, 'qwen/qwen3.8-27b:free': 1, 'google/gemma-4-26b-a4b-it:free': 2, 'dots-studio/dots-3-note-preview:free': 3 }; /* v78-vision */
+  function wmVisionQueue(q, hasImg){
+    try{
+      if(!hasImg) return q;
+      var vq = [], rest = [];
+      for(var i = 0; i < q.length; i++){ if(q[i] && (q[i].m in WM_VISION_RANK)) vq.push(q[i]); else rest.push(q[i]); }
+      vq.sort(function(a, b){ return WM_VISION_RANK[a.m] - WM_VISION_RANK[b.m]; });
+      return vq.length ? vq : q;
+    }catch(e){ return q; }
+  }
+  function wmVisionFix(msgs){
+    try{
+      for(var i = msgs.length - 1; i >= 0; i--){
+        var m = msgs[i];
+        if(!m || m.role !== 'user' || !Array.isArray(m.content)) continue;
+        var hasImg = false, hasText = false;
+        for(var j = 0; j < m.content.length; j++){
+          var b = m.content[j];
+          if(!b) continue;
+          if(b.type === 'image_url' || b.type === 'image') hasImg = true;
+          if(b.type === 'text' && typeof b.text === 'string' && b.text.trim().length > 0) hasText = true;
+        }
+        if(hasImg && !hasText){
+          var en = false;
+          try{ en = window.__wandexEn === true; }catch(e0){}
+          m.content.push({ type: 'text', text: en ? 'Describe in detail what is in this image.' : 'Опиши подробно, что на этом изображении.' });
+        }
+        break;
+      }
+    }catch(e1){}
   }
 async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
