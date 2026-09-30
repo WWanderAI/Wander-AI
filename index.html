@@ -1592,6 +1592,22 @@ main#chat{scroll-behavior:smooth;}
   *{ scrollbar-width:thin; scrollbar-color:var(--amber-dim) transparent; }
 
   /* v72-svgback: возврат к SVG-иконкам */
+
+  /* v75-rich: таблицы и код-карточки */
+  .wm-table{ margin:10px 0; overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
+  .wm-table table{ border-collapse:collapse; width:100%; font-size:13.5px; }
+  .wm-table th, .wm-table td{ padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+  .wm-table thead th{ background:var(--bg-panel-2); color:var(--amber); font-weight:700; white-space:nowrap; }
+  .wm-table tbody tr:last-child td{ border-bottom:none; }
+  .wm-table tbody tr:nth-child(even) td{ background:rgba(255,255,255,.025); }
+  .wm-rich-bar{ display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-panel-2); border-bottom:1px solid var(--line); font-size:12px; color:var(--text-dim); }
+  .wm-rich-bar .wm-spacer{ flex:1; }
+  .wm-bar-btn{ background:transparent; border:1px solid var(--line); color:var(--text); border-radius:8px; padding:3px 10px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .wm-bar-btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .wm-code{ margin:10px 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .wm-code pre{ margin:0; padding:10px 12px; overflow-x:auto; font-size:13px; line-height:1.5; background:rgba(0,0,0,.25); }
+  .wm-code-lang{ color:var(--amber); font-weight:700; }
+  .wm-code-out{ margin:0; padding:10px 12px; border-top:1px solid var(--line); background:rgba(0,0,0,.35); font-family:monospace; font-size:12.5px; white-space:pre-wrap; word-break:break-word; color:var(--text); }
 </style>
 </head>
 <body>
@@ -2424,14 +2440,14 @@ main#chat{scroll-behavior:smooth;}
   }
 
   function wmFilesInit(){
-    try{ wmFilesScan(); }catch(e0){}
+    try{ wmFilesScan(); wmRichScan(); }catch(e0){}
     try{
       const chat = document.getElementById('chat');
       if(chat && window.MutationObserver){
         let tmr = null;
         new MutationObserver(() => {
           if(tmr) return;
-          tmr = setTimeout(() => { tmr = null; try{ wmFilesScan(); }catch(e1){} }, 250);
+          tmr = setTimeout(() => { tmr = null; try{ wmFilesScan(); wmRichScan(); }catch(e1){} }, 250);
         }).observe(chat, { childList: true, subtree: true });
       }
     }catch(e2){}
@@ -2441,10 +2457,26 @@ main#chat{scroll-behavior:smooth;}
   function renderMarkdown(raw){
     let s = escapeHtml(raw);
     const wmFenceStash = [];
-    s = s.replace(/```(?:\w*\n)?([\s\S]*?)```/g, (m, code) => { wmFenceStash.push('<pre><code>' + code.trim() + '</code></pre>'); return '\u0000WMFENCE' + (wmFenceStash.length - 1) + '\u0000'; });
-    s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => { wmFenceStash.push('<pre data-lang="' + ((lang || 'text').toLowerCase()) + '"><code>' + code.trim() + '</code></pre>'); return '\u0000WMFENCE' + (wmFenceStash.length - 1) + '\u0000'; });
+        const wmTableStash = []; /* v75-rich */
+    s = s.replace(/(?:^[ \t]*\|.*(?:\n|$)){2,}/gm, function(block){
+      var rows = block.trim().split('\n').map(function(ln){ return ln.trim().replace(/^\||\|$/g, '').split('|').map(function(c){ return c.trim(); }); });
+      if(rows.length < 2) return block;
+      if(!rows[1].every(function(c){ return /^:?-+:?$/.test(c); })) return block;
+      var aligns = rows[1].map(function(c){ return /^:-+:$/.test(c) ? 'center' : (/^-+:$/.test(c) ? 'right' : 'left'); });
+      function cell(x){ return x.replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); }
+      function al(i){ return (aligns[i] && aligns[i] !== 'left') ? ' style="text-align:' + aligns[i] + '"' : ''; }
+      var h = '<div class="wm-table"><table><thead><tr>';
+      rows[0].forEach(function(c, i){ h += '<th' + al(i) + '>' + cell(c) + '</th>'; });
+      h += '</tr></thead><tbody>';
+      for(var r = 2; r < rows.length; r++){ h += '<tr>'; rows[r].forEach(function(c, i){ h += '<td' + al(i) + '>' + cell(c) + '</td>'; }); h += '</tr>'; }
+      wmTableStash.push(h + '</tbody></table></div>');
+      return '\u0000WMTABLE' + (wmTableStash.length - 1) + '\u0000';
+    });
+s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/\u0000WMFENCE(\d+)\u0000/g, (m, i) => wmFenceStash[+i]);
+    s = s.replace(/\u0000WMTABLE(\d+)\u0000/g, (m, i) => wmTableStash[+i]);
     return s;
   }
 
@@ -3886,7 +3918,7 @@ function wmThinkStart(bubble){
         tm.textContent = '· ' + Math.round((now - t0) / 1000) + ' с';
         box.classList.add('wm-done');
         clearInterval(iv);
-        try{ wmFilesScan(); }catch(eF){}
+        try{ wmFilesScan(); wmRichScan(); }catch(eF){}
         setTimeout(function(){ if(box.parentNode) box.parentNode.removeChild(box); }, 1150);
         return;
       }
@@ -3921,7 +3953,7 @@ function wmThinkStart(bubble){
     var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'chat'; /* v63-stopgo */
     try{
       const mode = MODES[currentMode];
-      const openAiMessages = toOpenAiMessages(trimHistory(history), mode.system);
+      const openAiMessages = toOpenAiMessages(trimHistory(history), (mode.system || '') + WM_FMT_HINT); /* v75-rich */
       try{ /* v66-aienrich: обогащаем ПОСЛЕДНИЙ вопрос только для ИИ */
         for(var ei = openAiMessages.length - 1; ei >= 0; ei--){
           var em = openAiMessages[ei];
@@ -4143,6 +4175,118 @@ function wmThinkStart(bubble){
       }catch(e2){}
       return { cmd: cmd, rest: rest, mod: WM_CMDS[cmd][en ? 'en' : 'ru'], wrapped: pre + rest };
     }catch(e3){ return null; }
+  }
+  /* v75-rich: таблицы с экспортом + код с запуском */
+  var WM_FMT_HINT = '\n\n[Формат ответа: сравнения, тарифы и любые данные — markdown-таблицей; код — fenced-блоком с языком.]';
+  var WM_CODE_EXT = { python: 'py', py: 'py', javascript: 'js', js: 'js', html: 'html', css: 'css', json: 'json', xml: 'xml', java: 'java', c: 'c', cpp: 'cpp', go: 'go', rust: 'rs', php: 'php', ruby: 'rb', sh: 'sh', sql: 'sql', txt: 'txt', text: 'txt' };
+  function wmBarBtn(label, fn){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'wm-bar-btn';
+    var sp = document.createElement('span'); sp.textContent = label;
+    b.appendChild(sp);
+    b.addEventListener('click', fn);
+    return b;
+  }
+  function wmBtnFlash(btn, word){
+    try{
+      var label = btn.querySelector('span'); if(!label) return;
+      var old = label.textContent; label.textContent = word;
+      setTimeout(function(){ label.textContent = old; }, 1500);
+    }catch(e){}
+  }
+  var __wmPyP = null;
+  function wmPyLoad(){
+    try{ if(window.__wmPy) return Promise.resolve(window.__wmPy); }catch(e){}
+    if(__wmPyP) return __wmPyP;
+    __wmPyP = new Promise(function(res, rej){
+      var sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      var done = false;
+      sc.onload = function(){ try{ window.loadPyodide().then(function(py){ if(done) return; done = true; window.__wmPy = py; res(py); }, function(e){ if(!done){ done = true; rej(e); } }); }catch(e){ if(!done){ done = true; rej(e); } } };
+      sc.onerror = function(){ if(!done){ done = true; rej(new Error('load')); } };
+      document.head.appendChild(sc);
+      setTimeout(function(){ if(!done){ done = true; rej(new Error('timeout')); } }, 90000);
+    });
+    __wmPyP.catch(function(){ __wmPyP = null; });
+    return __wmPyP;
+  }
+  function wmCodeRun(lang, code, out, btn){
+    try{
+      out.hidden = false;
+      if(lang === 'html' || wmIsHtmlCode(code)){ try{ wmFileOpen(code, 'wandex-page.html'); }catch(e){} out.textContent = 'Открыл предпросмотр выше.'; return; }
+      if(lang === 'js' || lang === 'javascript'){
+        var logs = [];
+        function cap(){ logs.push(Array.prototype.map.call(arguments, String).join(' ')); }
+        try{
+          var r = new Function('console', code)({ log: cap, error: cap, warn: cap, info: cap });
+          if(r !== undefined) logs.push(String(r));
+          out.textContent = logs.join('\n') || '(выполнено, вывода нет)';
+        }catch(e){ out.textContent = 'Ошибка: ' + (e && e.message ? e.message : e); }
+        return;
+      }
+      if(lang === 'py' || lang === 'python'){
+        out.textContent = 'Загрузка Python… (первый раз ~10 МБ)';
+        wmPyLoad().then(function(py){
+          var buf = [];
+          try{ py.setStdout({ batched: function(s){ buf.push(s); } }); py.setStderr({ batched: function(s){ buf.push(s); } }); }catch(e0){}
+          try{ var r2 = py.runPython(code); if(r2 !== undefined) buf.push(String(r2)); out.textContent = buf.join('\n') || '(выполнено, вывода нет)'; }
+          catch(e2){ out.textContent = 'Ошибка: ' + (e2 && e2.message ? e2.message : e2); }
+        }).catch(function(){ out.textContent = 'Не загрузился Python (нужен интернет).'; });
+        return;
+      }
+      out.textContent = 'Запуск: только JS, Python и HTML.';
+    }catch(e3){ try{ out.textContent = 'Ошибка запуска.'; }catch(e4){} }
+  }
+  function wmTableExp(wrap, fmt, btn){
+    try{
+      var tb = wrap.querySelector('table'); if(!tb) return;
+      var rows = [];
+      tb.querySelectorAll('tr').forEach(function(tr){
+        var cells = [];
+        tr.querySelectorAll('th,td').forEach(function(c){ cells.push(c.textContent); });
+        rows.push(cells);
+      });
+      if(fmt === 'csv'){
+        var csv = rows.map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
+        wmFileDownload('\ufeff' + csv, 'wandex-table.csv');
+      }else{
+        wmFileDownload('<html><head><meta charset="UTF-8"></head><body>' + tb.outerHTML + '</body></html>', 'wandex-table.xls');
+      }
+      wmBtnFlash(btn, 'готово');
+    }catch(e){}
+  }
+  function wmRichScan(){
+    try{
+      var chat = document.getElementById('chat'); if(!chat) return;
+      chat.querySelectorAll('.msg.ai pre[data-lang]').forEach(function(pre){
+        if(pre.getAttribute('data-wm-rich') === '1') return;
+        pre.setAttribute('data-wm-rich', '1');
+        var lang = (pre.getAttribute('data-lang') || 'text').toLowerCase();
+        var code = pre.textContent || '';
+        var wrap = document.createElement('div'); wrap.className = 'wm-code';
+        var bar = document.createElement('div'); bar.className = 'wm-rich-bar';
+        var lb = document.createElement('span'); lb.className = 'wm-code-lang'; lb.textContent = lang;
+        var sp = document.createElement('span'); sp.className = 'wm-spacer';
+        var out = document.createElement('div'); out.className = 'wm-code-out'; out.hidden = true;
+        var bRun = wmBarBtn('▶ Запустить', function(){ wmCodeRun(lang, code, out, bRun); });
+        var bCopy = wmBarBtn('Копировать', function(){ copyText(code, bCopy); });
+        var bDl = wmBarBtn('Скачать', function(){ wmFileDownload(code, 'wandex-code.' + (WM_CODE_EXT[lang] || 'txt')); wmBtnFlash(bDl, 'готово'); });
+        bar.appendChild(lb); bar.appendChild(sp); bar.appendChild(bRun); bar.appendChild(bCopy); bar.appendChild(bDl);
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(bar); wrap.appendChild(pre); wrap.appendChild(out);
+      });
+      chat.querySelectorAll('.msg.ai .wm-table').forEach(function(w){
+        if(w.getAttribute('data-wm-rich') === '1') return;
+        w.setAttribute('data-wm-rich', '1');
+        var bar = document.createElement('div'); bar.className = 'wm-rich-bar';
+        var lb = document.createElement('span'); lb.textContent = 'Таблица';
+        var sp = document.createElement('span'); sp.className = 'wm-spacer';
+        var bCsv = wmBarBtn('CSV', function(){ wmTableExp(w, 'csv', bCsv); });
+        var bXls = wmBarBtn('Excel', function(){ wmTableExp(w, 'xls', bXls); });
+        bar.appendChild(lb); bar.appendChild(sp); bar.appendChild(bCsv); bar.appendChild(bXls);
+        w.insertBefore(bar, w.firstChild);
+      });
+    }catch(e){}
   }
 async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
