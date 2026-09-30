@@ -3928,7 +3928,7 @@ function wmThinkStart(bubble){
           if(em && em.role === 'user' && Array.isArray(em.content)){
             for(var bi = 0; bi < em.content.length; bi++){
               var bb = em.content[bi];
-              if(bb && bb.type === 'text' && typeof bb.text === 'string' && bb.text.trim().length >= 10){ bb.text = wmSuggEnrich(bb.text); break; }
+              if(bb && bb.type === 'text' && typeof bb.text === 'string' && bb.text.trim().length >= 10){ bb.text = wmSuggEnrich(bb.text) + (window.__wmCmdMod || ''); break; } /* v74-slashcmd */
             }
             break;
           }
@@ -4104,8 +4104,49 @@ function wmThinkStart(bubble){
     }
   }
 
-  async function handleSend(){
+    /* v74-slashcmd: /short /long /simple /steps /fun /code /en /ru /help */
+  var WM_CMDS = {
+    short: { ru: '\n\n[Отвечай КОРОТКО: 2-4 предложения, только суть.]', en: '\n\n[Reply BRIEFLY: 2-4 sentences, only the point.]' },
+    long: { ru: '\n\n[Отвечай ПОДРОБНО и развёрнуто, с примерами.]', en: '\n\n[Reply IN DETAIL with examples.]' },
+    simple: { ru: '\n\n[Объясни ПРОСТЫМИ словами, как новичку.]', en: '\n\n[Explain in SIMPLE words, like to a beginner.]' },
+    steps: { ru: '\n\n[Отвечай ПО ШАГАМ нумерованным списком.]', en: '\n\n[Reply STEP BY STEP as a numbered list.]' },
+    fun: { ru: '\n\n[Отвечай с ЮМОРОМ, легко и весело.]', en: '\n\n[Reply with HUMOR, light and fun.]' },
+    code: { ru: '\n\n[Покажи КОД с примером и краткими комментариями.]', en: '\n\n[Show CODE with an example and brief comments.]' },
+    en: { ru: '\n\n[Reply in ENGLISH.]', en: '\n\n[Reply in ENGLISH.]' },
+    ru: { ru: '\n\n[Отвечай на РУССКОМ языке.]', en: '\n\n[Reply in RUSSIAN.]' }
+  };
+  function wmCmdParse(raw){
+    try{
+      var en = false;
+      try{ en = window.__wandexEn === true; }catch(e0){}
+      var stripped = String(raw == null ? '' : raw);
+      try{ if(window.__wmStrip) stripped = window.__wmStrip(stripped) || stripped; }catch(e1){}
+      stripped = stripped.trim();
+      var m = stripped.match(/^\/([a-z]+)\b\s*([\s\S]*)$/i);
+      if(!m) return null;
+      var cmd = m[1].toLowerCase(), rest = (m[2] || '').trim();
+      if(cmd === 'help'){
+        return { local: en ? '/short — brief\n/long — in detail\n/simple — simple words\n/steps — step by step\n/fun — with humor\n/code — with code example\n/en — reply in English\n/ru — reply in Russian\n\nType the command before your question: /short why is the sky blue'
+                             : '/short — коротко, по делу\n/long — подробно, с примерами\n/simple — простыми словами\n/steps — по шагам\n/fun — с юмором\n/code — с примером кода\n/en — answer in English\n/ru — отвечай по-русски\n\nПиши команду перед вопросом: /short почему небо голубое' };
+      }
+      if(!WM_CMDS[cmd]) return null;
+      if(!rest){
+        return { cmd: cmd, rest: '', mod: WM_CMDS[cmd][en ? 'en' : 'ru'],
+                 usage: en ? ('Use like this: /' + cmd + ' your question\nAll commands: /help')
+                            : ('Пиши так: /' + cmd + ' твой вопрос\nВсе команды: /help') };
+      }
+      var cut = stripped.slice(0, stripped.length - rest.length).trim();
+      var pre = '';
+      try{
+        var si = String(raw).indexOf(stripped);
+        if(si > 0) pre = String(raw).slice(0, si);
+      }catch(e2){}
+      return { cmd: cmd, rest: rest, mod: WM_CMDS[cmd][en ? 'en' : 'ru'], wrapped: pre + rest };
+    }catch(e3){ return null; }
+  }
+async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
+    try{ window.__wmCmdMod = ''; var __cp = wmCmdParse(input.value || ''); if(__cp && __cp.local){ addMessage('ai', __cp.local, {}); input.value = ''; input.style.height = 'auto'; return; } if(__cp && __cp.rest === '' && !__cp.wrapped){ if(pendingImages.length === 0){ addMessage('ai', __cp.usage, {}); input.value = ''; input.style.height = 'auto'; return; } } if(__cp && __cp.wrapped){ window.__wmCmdMod = __cp.mod; input.value = __cp.wrapped; } else if(__cp && __cp.mod){ window.__wmCmdMod = __cp.mod; } }catch(eWC){} /* v74-slashcmd */
     const text = input.value.trim();
     const images = pendingImages.slice();
     if(!text && images.length === 0) return;
