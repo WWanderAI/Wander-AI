@@ -4448,11 +4448,20 @@ function wmThinkStart(bubble){
                disp: names + (text.trim() ? '\n' + text : '') };
     }catch(e){ return { full: text, disp: text }; }
   }
+  async function wmIsBinary(file){ /* v85-filefix */
+    try{
+      var buf = await file.slice(0, 8192).arrayBuffer();
+      var u8 = new Uint8Array(buf);
+      for(var i = 0; i < u8.length; i++){ if(u8[i] === 0) return true; }
+      return false;
+    }catch(e){ return false; }
+  }
   async function wmAttachFiles(list){ /* v84-attach */
     var skipped = false;
     for(const file of (list || [])){
       if(pendingFiles.length >= 3){ skipped = true; break; }
       if(file.size > 200 * 1024){ addMessage('error', 'Файл "' + file.name + '" слишком большой (>200КБ), пропущен.', { error: true }); continue; }
+      if(await wmIsBinary(file)){ addMessage('error', 'Файл "' + file.name + '" не текстовый.', { error: true }); continue; } /* v85-filefix */
       try{
         var txt = await file.text();
         if(!txt || !txt.trim()){ addMessage('error', 'Файл "' + file.name + '" пустой или не текстовый.', { error: true }); continue; }
@@ -4497,7 +4506,7 @@ function wmThinkStart(bubble){
       if(kind === 'file'){
         window.__wmAttachMode = 'file';
         fileInput.removeAttribute('capture');
-        fileInput.setAttribute('accept', '.txt,.md,.csv,.json,.js,.py,.html,.css,.xml,.log,.ini,.cfg,.yaml,.yml,.text');
+        fileInput.setAttribute('accept', '*/*'); /* v85-filefix: расширения ломали интент APK */
         fileInput.multiple = true;
       }else if(kind === 'cam'){
         window.__wmAttachMode = 'photo';
