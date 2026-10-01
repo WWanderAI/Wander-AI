@@ -433,6 +433,17 @@ return chain(0);
     flex-shrink:0;
   }
   #modeTriggerLabel{ flex:1; text-align:left; }
+.mode-btn.wm-hasver{display:flex;align-items:center;gap:8px;} /* v87-versions */
+.wm-ver-arrow{display:inline-flex;margin-left:auto;padding:6px 2px 6px 10px;opacity:.7;flex:none;cursor:pointer;} /* v87-versions */
+.wm-ver-arrow svg{display:block;transition:transform .2s ease;} /* v87-versions */
+.wm-ver-arrow.open svg{transform:rotate(180deg);} /* v87-versions */
+.wm-ver-list{display:flex;flex-direction:column;max-height:0;overflow:hidden;opacity:0;transition:max-height .25s ease,opacity .2s ease;} /* v87-versions */
+.wm-ver-list.open{max-height:200px;opacity:1;} /* v87-versions */
+.wm-ver-item{display:flex;align-items:center;justify-content:space-between;background:none;border:none;color:var(--text-dim,#9AA0B4);font-size:13.5px;padding:9px 14px 9px 26px;cursor:pointer;text-align:left;} /* v87-versions */
+.wm-ver-item .wm-ver-check{opacity:0;color:var(--amber,#D4A017);font-weight:700;} /* v87-versions */
+.wm-ver-item.sel{color:var(--text,#fff);} /* v87-versions */
+.wm-ver-item.sel .wm-ver-check{opacity:1;} /* v87-versions */
+.wm-ver-list + .mode-btn{border-top:1px solid var(--line);} /* v87-versions */
   .mode-trigger-chevron{
     width:14px;height:14px;
     flex-shrink:0;
@@ -464,7 +475,7 @@ return chain(0);
     transition:max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s ease, transform .22s cubic-bezier(.4,0,.2,1);
   }
   .mode-selector.open .mode-dropdown{
-    max-height:260px;
+    max-height:440px; /* v87-versions */
     opacity:1;
     transform:translateY(0);
     pointer-events:auto;
@@ -3494,6 +3505,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
     applyModeUI();
     saveState();
   });
+  setTimeout(function(){ try{ wmVerInit(); }catch(e){} }, 0); /* v87-versions */
 
   input.addEventListener('input', () => {
     input.style.height = 'auto';
@@ -4521,6 +4533,84 @@ function wmThinkStart(bubble){
       }
       fileInput.click();
     }catch(e){}
+  }
+  var WM_MODE_VERS = { scout: ['v1'], pathfinder: ['v1'], navigator: ['v1'] }; /* v87-versions */
+  function wmVerGet(mode){
+    try{
+      var o = JSON.parse(localStorage.getItem('wandexModeVers') || '{}');
+      var v = o[mode];
+      if(v && WM_MODE_VERS[mode] && WM_MODE_VERS[mode].indexOf(v) >= 0) return v;
+    }catch(e){}
+    return ((WM_MODE_VERS && WM_MODE_VERS[mode]) || ['v1'])[0];
+  }
+  function wmVerSet(mode, v){
+    try{
+      var o = {};
+      try{ o = JSON.parse(localStorage.getItem('wandexModeVers') || '{}'); }catch(e0){}
+      o[mode] = v;
+      localStorage.setItem('wandexModeVers', JSON.stringify(o));
+    }catch(e){}
+  }
+  function wmVerInit(){ /* v87-versions: стрелки + списки версий у режимов */
+    try{
+      if(!WM_MODE_VERS || typeof document === 'undefined') return;
+      var btns = modeRow.querySelectorAll('.mode-btn');
+      btns.forEach(function(b){
+        try{
+          var mode = b.dataset.mode;
+          if(!WM_MODE_VERS[mode]) return;
+          if(b.querySelector('.wm-ver-arrow')) return;
+          b.classList.add('wm-hasver');
+          var ar = document.createElement('span');
+          ar.className = 'wm-ver-arrow';
+          ar.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+          (function(md){ ar.addEventListener('click', function(ev){ ev.stopPropagation(); ev.preventDefault(); wmVerToggle(md); }); })(mode);
+          b.appendChild(ar);
+          var list = document.createElement('div');
+          list.className = 'wm-ver-list'; list.id = 'wmVer_' + mode;
+          WM_MODE_VERS[mode].forEach(function(v){
+            var it = document.createElement('button');
+            it.type = 'button'; it.className = 'wm-ver-item'; it.dataset.ver = v;
+            var s1 = document.createElement('span'); s1.textContent = v;
+            var s2 = document.createElement('span'); s2.className = 'wm-ver-check'; s2.textContent = '\u2713';
+            it.appendChild(s1); it.appendChild(s2);
+            (function(md, vv){ it.addEventListener('click', function(ev){ ev.stopPropagation(); wmVerPick(md, vv); }); })(mode, v);
+            list.appendChild(it);
+          });
+          b.after(list);
+          wmVerPaint(mode);
+        }catch(eB){}
+      });
+    }catch(e){}
+  }
+  function wmVerToggle(mode){
+    try{
+      var list = document.getElementById('wmVer_' + mode);
+      if(!list) return;
+      var willOpen = !list.classList.contains('open');
+      modeRow.querySelectorAll('.wm-ver-list.open').forEach(function(l){ l.classList.remove('open'); });
+      modeRow.querySelectorAll('.wm-ver-arrow.open').forEach(function(a){ a.classList.remove('open'); });
+      if(willOpen){
+        list.classList.add('open');
+        var b = modeRow.querySelector('.mode-btn[data-mode="' + mode + '"] .wm-ver-arrow');
+        if(b) b.classList.add('open');
+      }
+    }catch(e){}
+  }
+  function wmVerPaint(mode){
+    try{
+      var cur = wmVerGet(mode);
+      modeRow.querySelectorAll('#wmVer_' + mode + ' .wm-ver-item').forEach(function(it){
+        it.classList.toggle('sel', it.dataset.ver === cur);
+      });
+    }catch(e){}
+  }
+  function wmVerPick(mode, v){
+    try{
+      wmVerSet(mode, v); wmVerPaint(mode);
+      var b = modeRow.querySelector('.mode-btn[data-mode="' + mode + '"]');
+      if(b && !b.classList.contains('active')){ b.click(); } else { closeModeDropdown(); }
+    }catch(e){ try{ closeModeDropdown(); }catch(e2){} }
   }
 async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
