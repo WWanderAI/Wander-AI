@@ -718,6 +718,15 @@ return chain(0);
     flex-shrink:0;
   }
   .attach-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.wm-attach-menu{position:fixed;z-index:9999;background:var(--bg-elev,#23232b);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);min-width:190px;animation:wmMsgIn .22s ease-out both;} /* v84-attach */
+.wm-attach-item{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;background:none;border:none;border-radius:10px;color:var(--text,#fff);font-size:15px;cursor:pointer;text-align:left;} /* v84-attach */
+.wm-attach-item:active{background:rgba(255,255,255,.08);} /* v84-attach */
+.wm-attach-item svg{flex:none;opacity:.85;} /* v84-attach */
+.attach-file{display:flex;align-items:center;gap:8px;background:var(--bg-elev,#23232b);border:1px solid rgba(212,160,23,.4);border-radius:10px;padding:8px 8px 8px 12px;font-size:13px;color:var(--text,#fff);flex-shrink:0;} /* v84-attach */
+.attach-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;} /* v84-attach */
+.attach-file .rm{position:static;width:26px;height:26px;flex:none;font-size:16px;} /* v84-attach */
+.af-ico{display:flex;flex:none;opacity:.9;color:#D4A017;} /* v84-attach */
+.af-ico svg{width:16px;height:16px;display:block;} /* v84-attach */
   .attach-thumb .rm{
     position:absolute;top:2px;right:2px;
     width:16px;height:16px;
@@ -2273,6 +2282,7 @@ main#chat{scroll-behavior:smooth;}
   }
   let history = [];
   let pendingImages = []; // { media_type, data (base64), previewUrl }
+  let pendingFiles = []; // v84-attach: { name, text }
 
   const chat = document.getElementById('chat');
   const emptyState = document.getElementById('emptyState');
@@ -2315,10 +2325,11 @@ main#chat{scroll-behavior:smooth;}
     return hist.slice(hist.length - MAX_HISTORY_MESSAGES);
   }
 
-  attachBtn.addEventListener('click', () => fileInput.click());
+  attachBtn.addEventListener('click', (e) => { try{ e.stopPropagation(); }catch(_){} wmAttachPick(); }); /* v84-attach */
 
   fileInput.addEventListener('change', async () => {
     const files = Array.from(fileInput.files || []);
+    if((window.__wmAttachMode || 'photo') === 'file'){ await wmAttachFiles(files); try{ fileInput.value = ''; }catch(_){} renderAttachPreview(); return; } /* v84-attach */
     let skippedForLimit = false;
     for(const file of files){
       if(pendingImages.length >= MAX_IMAGES){ skippedForLimit = true; break; }
@@ -2827,6 +2838,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
     applyModeUI();
     history = c.history || [];
     pendingImages = [];
+    pendingFiles = []; /* v84-attach */
     renderAttachPreview();
     modeRow.querySelectorAll('.mode-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.mode === currentMode);
@@ -2844,6 +2856,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
     activeChatId = c.id;
     history = [];
     pendingImages = [];
+    pendingFiles = []; /* v84-attach */
     renderAttachPreview();
     renderMessagesFromHistory(history);
     persistChats();
@@ -3421,6 +3434,22 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
       thumb.appendChild(rm);
       attachPreview.appendChild(thumb);
     });
+    pendingFiles.forEach((fl, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'attach-file';
+      const ic = document.createElement('span');
+      ic.className = 'af-ico';
+      ic.innerHTML = WM_ATTACH_SVG.file;
+      const nm = document.createElement('span');
+      nm.textContent = fl.name;
+      const rm = document.createElement('button');
+      rm.className = 'rm';
+      rm.textContent = '×';
+      rm.setAttribute('aria-label', 'Удалить файл');
+      rm.addEventListener('click', () => { pendingFiles.splice(idx, 1); renderAttachPreview(); });
+      chip.appendChild(ic); chip.appendChild(nm); chip.appendChild(rm);
+      attachPreview.appendChild(chip);
+    }); /* v84-attach */
   }
 
   const modeSelector = document.getElementById('modeSelector');
@@ -4402,12 +4431,97 @@ function wmThinkStart(bubble){
       return /пустой ответ|Модели заняты|Не удалось разобрать ответ сервера|Нет соединения|Сеть ответила с ошибкой|Сервер временно недоступен/.test(String(msg || ''));
     }catch(e){ return false; }
   }
+  function wmFileCut(s){ /* v84-attach */
+    try{
+      s = String(s == null ? '' : s);
+      if(s.length > 12000) return s.slice(0, 12000) + '\n[...файл обрезан...]';
+      return s;
+    }catch(e){ return ''; }
+  }
+  function wmFileBlock(files, text){ /* v84-attach: full = ИИ, disp = пузырь */
+    try{
+      files = files || []; text = String(text == null ? '' : text);
+      if(!files.length) return { full: text, disp: text };
+      var body = files.map(function(f){ return '--- Файл: ' + (f && f.name) + ' ---\n' + (f && f.text); }).join('\n\n');
+      var names = files.map(function(f){ return f && f.name; }).join(', ');
+      return { full: body + (text.trim() ? '\n\n--- Вопрос ---\n' + text : '\n\n[Опиши содержимое файла.]'),
+               disp: names + (text.trim() ? '\n' + text : '') };
+    }catch(e){ return { full: text, disp: text }; }
+  }
+  async function wmAttachFiles(list){ /* v84-attach */
+    var skipped = false;
+    for(const file of (list || [])){
+      if(pendingFiles.length >= 3){ skipped = true; break; }
+      if(file.size > 200 * 1024){ addMessage('error', 'Файл "' + file.name + '" слишком большой (>200КБ), пропущен.', { error: true }); continue; }
+      try{
+        var txt = await file.text();
+        if(!txt || !txt.trim()){ addMessage('error', 'Файл "' + file.name + '" пустой или не текстовый.', { error: true }); continue; }
+        pendingFiles.push({ name: String(file.name || 'файл').slice(0, 60), text: wmFileCut(txt) });
+      }catch(e){ addMessage('error', 'Не удалось прочитать файл "' + file.name + '".', { error: true }); }
+    }
+    if(skipped){ addMessage('error', 'Можно прикрепить максимум 3 файла за раз.', { error: true }); }
+  }
+  var WM_ATTACH_SVG = {
+    photo: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
+    file: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>',
+    cam: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
+  };
+  function wmAttachPick(){ /* v84-attach: меню скрепки */
+    try{
+      var old = document.getElementById('wmAttachMenu');
+      if(old){ old.remove(); return; }
+      var en = false;
+      try{ en = window.__wandexEn === true; }catch(e0){}
+      var m = document.createElement('div');
+      m.id = 'wmAttachMenu'; m.className = 'wm-attach-menu';
+      var items = en ? [['photo','Photo'],['file','File'],['cam','Camera']] : [['photo','Фото'],['file','Файл'],['cam','Камера']];
+      items.forEach(function(it){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'wm-attach-item';
+        b.innerHTML = WM_ATTACH_SVG[it[0]] + '<span>' + it[1] + '</span>';
+        (function(kind){ b.addEventListener('click', function(ev){ try{ ev.stopPropagation(); }catch(_){} m.remove(); wmAttachGo(kind); }); })(it[0]);
+        m.appendChild(b);
+      });
+      document.body.appendChild(m);
+      try{
+        var r = attachBtn.getBoundingClientRect();
+        m.style.left = Math.max(8, r.left - 40) + 'px';
+        m.style.bottom = (window.innerHeight - r.top + 12) + 'px';
+      }catch(e1){}
+      var closer = function(ev){ try{ if(!m.contains(ev.target)){ m.remove(); document.removeEventListener('click', closer, true); } }catch(e2){} };
+      setTimeout(function(){ try{ document.addEventListener('click', closer, true); }catch(e3){} }, 50);
+    }catch(e){}
+  }
+  function wmAttachGo(kind){ /* v84-attach */
+    try{
+      if(kind === 'file'){
+        window.__wmAttachMode = 'file';
+        fileInput.removeAttribute('capture');
+        fileInput.setAttribute('accept', '.txt,.md,.csv,.json,.js,.py,.html,.css,.xml,.log,.ini,.cfg,.yaml,.yml,.text');
+        fileInput.multiple = true;
+      }else if(kind === 'cam'){
+        window.__wmAttachMode = 'photo';
+        fileInput.setAttribute('accept', 'image/*');
+        fileInput.setAttribute('capture', 'environment');
+        fileInput.multiple = false;
+      }else{
+        window.__wmAttachMode = 'photo';
+        fileInput.removeAttribute('capture');
+        fileInput.setAttribute('accept', 'image/*');
+        fileInput.multiple = true;
+      }
+      fileInput.click();
+    }catch(e){}
+  }
 async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
     try{ window.__wmCmdMod = ''; var __cp = wmCmdParse(input.value || ''); if(__cp && __cp.local){ addMessage('ai', __cp.local, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } if(__cp && __cp.rest === '' && !__cp.wrapped){ if(pendingImages.length === 0){ addMessage('ai', __cp.usage, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } } if(__cp && __cp.wrapped){ window.__wmCmdMod = __cp.mod; input.value = __cp.wrapped; } else if(__cp && __cp.mod){ window.__wmCmdMod = __cp.mod; } }catch(eWC){} /* v74-slashcmd */
     const text = input.value.trim();
     const images = pendingImages.slice();
-    if(!text && images.length === 0) return;
+    const files = pendingFiles.slice(); /* v84-attach */
+    if(!text && images.length === 0 && files.length === 0) return;
+    var __fb = wmFileBlock(files, text); /* v84-attach */
+    var fullText = __fb.full, dispText = __fb.disp;
 
     triggerSendVibration();
 
@@ -4486,24 +4600,25 @@ async function handleSend(){
       return;
     }
 
-    const userDiv = addMessage('user', text, { images: images.map(i => i.previewUrl) });
+    const userDiv = addMessage('user', dispText, { images: /* v84-attach */ images.map(i => i.previewUrl) });
 
     const contentBlocks = images.map(img => ({
       type: 'image',
       media_type: img.media_type,
       data: img.data
     }));
-    if(text) contentBlocks.push({ type: 'text', text: text });
+    if(fullText) contentBlocks.push({ type: 'text', text: fullText }); /* v84-attach */
 
     history.push({ role: 'user', content: contentBlocks });
     const userIndex = history.length - 1;
     userDiv.dataset.historyIndex = userIndex;
-    addUserActions(userDiv, text, userIndex);
+    addUserActions(userDiv, dispText, userIndex); /* v84-attach */
     saveState();
 
     wmDraftScrub(input.value); input.value = '';
     input.style.height = 'auto';
     pendingImages = [];
+    pendingFiles = []; /* v84-attach */
     renderAttachPreview();
     sendBtn.disabled = true;
 
