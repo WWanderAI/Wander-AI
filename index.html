@@ -1720,15 +1720,15 @@ main#chat{scroll-behavior:smooth;}
   <div class="mode-selector" id="modeSelector">
     <button class="mode-trigger" id="modeTrigger" type="button" aria-haspopup="true" aria-expanded="false">
       <span class="mode-trigger-dot"></span>
-      <span id="modeTriggerLabel">Скаут: быстро</span>
+      <span id="modeTriggerLabel">Флэш: быстро</span>
       <svg class="mode-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 12 15 18 9"></polyline>
       </svg>
     </button>
     <div class="mode-dropdown" id="modeRow">
-      <button class="mode-btn active" data-mode="scout">Скаут: быстро</button>
-      <button class="mode-btn" data-mode="pathfinder">Следопыт: сбалансированно</button>
-      <button class="mode-btn" data-mode="navigator">Штурман: глубоко</button>
+      <button class="mode-btn active" data-mode="scout">Флэш: быстро</button>
+      <button class="mode-btn" data-mode="pathfinder">Про: сбалансированно</button>
+      <button class="mode-btn" data-mode="navigator">Ультра: глубоко</button>
       <button class="mode-btn" id="videoModeBtn" data-mode="video">🔒 Видео: клип · PRO</button>
     </div>
   </div>
@@ -2079,18 +2079,18 @@ main#chat{scroll-behavior:smooth;}
 
   const MODES = {
     scout: {
-      label: 'Скаут',
-      system: 'Ты — Wandex AI в режиме "Скаут". Отвечай кратко, по делу, без лишних слов. Максимум 3-4 предложения, если не попросили подробнее.' + NO_THINKING,
+      label: 'Флэш', /* v86-rename */
+      system: 'Ты — Wandex AI в режиме "Флэш". Отвечай кратко, по делу, без лишних слов. Максимум 3-4 предложения, если не попросили подробнее.' + NO_THINKING,
       max_tokens: 1500
     },
     pathfinder: {
-      label: 'Следопыт',
-      system: 'Ты — Wandex AI в режиме "Следопыт". Отвечай сбалансированно: достаточно подробно, чтобы быть полезным, но без воды.' + NO_THINKING,
+      label: 'Про',
+      system: 'Ты — Wandex AI в режиме "Про". Отвечай сбалансированно: достаточно подробно, чтобы быть полезным, но без воды.' + NO_THINKING,
       max_tokens: 3000
     },
     navigator: {
-      label: 'Штурман',
-      system: 'Ты — Wandex AI в режиме "Штурман". Разбирай вопрос глубоко: структурируй ответ, рассматривай детали, приводи примеры и оговорки, где это уместно.' + NO_THINKING,
+      label: 'Ультра',
+      system: 'Ты — Wandex AI в режиме "Ультра". Разбирай вопрос глубоко: структурируй ответ, рассматривай детали, приводи примеры и оговорки, где это уместно.' + NO_THINKING,
       max_tokens: 8000
     },
     video: {
