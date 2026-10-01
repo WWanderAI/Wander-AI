@@ -706,7 +706,9 @@ return chain(0);
     0%, 100%{ box-shadow:0 0 0 0 rgba(168,82,58,0.35); }
     50%{ box-shadow:0 0 0 6px rgba(168,82,58,0); }
   }
-  #send:active, #attach:active, #micBtn:active{transform:scale(0.94);}
+  #send:active, #attach:active, #micBtn.wm-v-think{color:var(--amber);border-color:var(--amber);background:rgba(180,134,62,0.12);} /* v88-voicedlg */
+#micBtn.wm-v-speak{color:#7FB069;border-color:#7FB069;background:rgba(127,176,105,0.12);animation:mic-pulse 1.1s ease-in-out infinite;} /* v88-voicedlg */
+#micBtn:active{transform:scale(0.94);}
   #send:disabled{opacity:0.35;cursor:default;}
   #send svg, #attach svg, #micBtn svg{width:16px;height:16px;}
   #send.stop-mode{
@@ -2842,6 +2844,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
   }
 
   function switchChat(id, skipClose){
+    try{ wmVoiceStop(); }catch(eVS){} /* v88-voicedlg */
     const c = findChat(id);
     if(!c) return;
     activeChatId = id;
@@ -2862,6 +2865,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
   }
 
   function createChat(){
+    try{ wmVoiceStop(); }catch(eVS){} /* v88-voicedlg */
     const c = { id: genId(), title: 'Новый чат', mode: currentMode, history: [], pinned: false, updatedAt: Date.now() };
     chats.push(c);
     activeChatId = c.id;
@@ -3668,8 +3672,13 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
   let recognizer = null;
   let isRecording = false;
 
-  if(!SpeechRecognitionCtor){
-    micBtn.style.display = 'none'; // браузер не поддерживает голосовой ввод — просто прячем кнопку
+  var __wmApkVoice = false;
+  try{ __wmApkVoice = !!(window.WandexAndroid && window.WandexAndroid.startVoiceInput); }catch(eAV){}
+  if(!SpeechRecognitionCtor && !__wmApkVoice){
+    micBtn.style.display = 'none'; // негде слушать — прячем кнопку
+  }else if(__wmApkVoice){
+    try{ micBtn.setAttribute('aria-label', 'Голосовой диалог'); micBtn.setAttribute('title', 'Голосовой диалог'); }catch(eAL){}
+    micBtn.addEventListener('click', () => wmVoiceToggle()); /* v88-voicedlg */
   }else{
     recognizer = new SpeechRecognitionCtor();
     recognizer.lang = 'ru-RU';
@@ -4612,6 +4621,149 @@ function wmThinkStart(bubble){
       if(b && !b.classList.contains('active')){ b.click(); } else { closeModeDropdown(); }
     }catch(e){ try{ closeModeDropdown(); }catch(e2){} }
   }
+  var WM_VOICE = { on: false, phase: 'idle', gen: 0, mark: 0, browserRec: null }; /* v88-voicedlg */
+  function wmVoiceHasApk(){ try{ return !!(window.WandexAndroid && window.WandexAndroid.startVoiceInput); }catch(e){ return false; } }
+  function wmVoiceUi(phase){
+    try{
+      WM_VOICE.phase = phase;
+      micBtn.classList.remove('recording', 'wm-v-think', 'wm-v-speak');
+      var en = false; try{ en = window.__wandexEn === true; }catch(e0){}
+      if(phase === 'listen'){ micBtn.classList.add('recording'); input.placeholder = en ? 'Listening…' : 'Слушаю…'; }
+      else if(phase === 'think'){ micBtn.classList.add('wm-v-think'); input.placeholder = en ? 'Thinking…' : 'Думаю…'; }
+      else if(phase === 'speak'){ micBtn.classList.add('wm-v-speak'); input.placeholder = en ? 'Speaking…' : 'Говорю…'; }
+      else { try{ applyModeUI(); }catch(e1){ input.placeholder = en ? 'Ask something…' : 'Спроси что-нибудь...'; } }
+    }catch(e){}
+  }
+  function wmVoiceListen(){
+    if(!WM_VOICE.on) return;
+    try{
+      if(WM_VOICE.browserRec){ try{ WM_VOICE.browserRec.start(); }catch(e){} wmVoiceUi('listen'); return; }
+      if(wmVoiceHasApk()){ window.WandexAndroid.stopVoiceInput(); window.WandexAndroid.startVoiceInput(); wmVoiceUi('listen'); }
+    }catch(e){}
+  }
+  window.__wandexVoiceResult = function(text, isFinal){
+    try{
+      if(!WM_VOICE.on) return;
+      var s = String(text || '');
+      if(!s.trim()) return;
+      input.value = s;
+      try{ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; input.dispatchEvent(new Event('input')); }catch(e1){}
+      if(isFinal) wmVoiceSend();
+    }catch(e){}
+  };
+  window.__wandexVoiceError = function(code){
+    try{
+      if(!WM_VOICE.on) return;
+      if(Number(code) === 9){ wmVoiceStop(); return; }
+      if(document.hidden) return;
+      setTimeout(function(){ if(WM_VOICE.on && WM_VOICE.phase === 'listen') wmVoiceListen(); }, 700);
+    }catch(e){}
+  };
+  function wmVoiceSend(){
+    if(!WM_VOICE.on) return;
+    wmVoiceUi('think');
+    WM_VOICE.gen = (typeof wmGenId === 'number') ? wmGenId : 0;
+    try{ handleSend(); }catch(e){ setTimeout(function(){ if(WM_VOICE.on) wmVoiceListen(); }, 800); return; }
+    try{ WM_VOICE.mark = chat.childElementCount; }catch(e2){}
+    wmVoiceWatch();
+  }
+  function wmVoiceWatch(){
+    var t0 = Date.now(), sawGen = false, g0 = WM_VOICE.gen;
+    var timer = setInterval(function(){
+      try{
+        if(!WM_VOICE.on){ clearInterval(timer); return; }
+        var genNow = (typeof wmGenId === 'number') ? wmGenId : 0;
+        if(genNow !== g0) sawGen = true;
+        if(!sawGen && Date.now() - t0 > 4000){ clearInterval(timer); if(WM_VOICE.on) wmVoiceListen(); return; }
+        if(sawGen && !isGenerating){
+          clearInterval(timer);
+          if(!WM_VOICE.on) return;
+          var fresh = false;
+          try{
+            if(chat.childElementCount > WM_VOICE.mark){
+              var last = chat.lastElementChild;
+              if(last){ var cl = ' ' + (last.className || '') + ' '; if(cl.indexOf(' ai ') >= 0 && cl.indexOf(' error ') < 0) fresh = true; }
+            }
+          }catch(e3){}
+          if(fresh) wmVoiceSpeakLast(); else if(WM_VOICE.on) wmVoiceListen();
+          return;
+        }
+        if(Date.now() - t0 > 330000){ clearInterval(timer); if(WM_VOICE.on) wmVoiceListen(); }
+      }catch(e){ try{ clearInterval(timer); }catch(e2){} }
+    }, 500);
+  }
+  function wmVoiceSpeakLast(){
+    if(!WM_VOICE.on) return;
+    var txt = '';
+    try{
+      var els = document.querySelectorAll('#chat .msg.ai .msg-text');
+      var last = els[els.length - 1];
+      txt = last ? (last.textContent || '') : '';
+      try{ if(window.__wmTts && window.__wmTts.wmCleanSpeech) txt = window.__wmTts.wmCleanSpeech(txt); }catch(eC){}
+      txt = String(txt || '').replace(/\s+/g, ' ').trim().slice(0, 600);
+    }catch(e){ txt = ''; }
+    if(!txt){ if(WM_VOICE.on) wmVoiceListen(); return; }
+    wmVoiceUi('speak');
+    try{
+      if(wmVoiceHasApk()){ wmVoiceWrapTts(); window.WandexAndroid.speak(txt); }
+      else if('speechSynthesis' in window){
+        var u = new SpeechSynthesisUtterance(txt);
+        u.lang = 'ru-RU'; u.rate = 1.05;
+        u.onend = function(){ if(WM_VOICE.on) wmVoiceListen(); };
+        u.onerror = function(){ if(WM_VOICE.on) wmVoiceListen(); };
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      }
+      else if(WM_VOICE.on) wmVoiceListen();
+    }catch(e){ if(WM_VOICE.on) wmVoiceListen(); }
+  }
+  function wmVoiceWrapTts(){
+    var n = 0;
+    var t = setInterval(function(){
+      try{
+        n++;
+        if(typeof window.__wandexTtsDone === 'function' && !window.__wandexTtsDone.__wmV){
+          var orig = window.__wandexTtsDone;
+          var fn = function(){ try{ orig(); }catch(eO){} try{ if(WM_VOICE.on && WM_VOICE.phase === 'speak'){ setTimeout(function(){ if(WM_VOICE.on) wmVoiceListen(); }, 350); } }catch(eV){} };
+          fn.__wmV = true;
+          window.__wandexTtsDone = fn;
+          clearInterval(t);
+        }
+        if(n > 30 || !WM_VOICE.on) clearInterval(t);
+      }catch(e){ try{ clearInterval(t); }catch(e2){} }
+    }, 500);
+  }
+  function wmVoiceStart(){
+    if(WM_VOICE.on) return;
+    var hasApk = wmVoiceHasApk();
+    var hasWeb = false;
+    try{ hasWeb = !!(window.SpeechRecognition || window.webkitSpeechRecognition); }catch(e){}
+    if(!hasApk && !hasWeb){ try{ addMessage('error', 'Голосовой диалог недоступен: обнови приложение.', { error: true }); }catch(e2){} return; }
+    WM_VOICE.on = true;
+    WM_VOICE.browserRec = null;
+    if(hasApk){ wmVoiceListen(); return; }
+    try{
+      var RC = window.SpeechRecognition || window.webkitSpeechRecognition;
+      var r = new RC();
+      r.lang = 'ru-RU'; r.continuous = false; r.interimResults = true;
+      r.onresult = function(e){ try{ var s = '', fin = false; for(var i = 0; i < e.results.length; i++){ s += e.results[i][0].transcript; if(e.results[i].isFinal) fin = true; } window.__wandexVoiceResult(s, fin); }catch(e2){} };
+      r.onerror = function(e){ try{ window.__wandexVoiceError(e && e.error === 'not-allowed' ? 9 : 7); }catch(e2){} };
+      r.onend = function(){ try{ if(WM_VOICE.on && WM_VOICE.phase === 'listen') wmVoiceListen(); }catch(e2){} };
+      WM_VOICE.browserRec = r;
+      wmVoiceListen();
+    }catch(e){ WM_VOICE.on = false; }
+  }
+  function wmVoiceStop(){
+    if(!WM_VOICE.on && WM_VOICE.phase === 'idle') return;
+    WM_VOICE.on = false;
+    try{ if(wmVoiceHasApk()) window.WandexAndroid.stopVoiceInput(); }catch(e){}
+    try{ if(wmVoiceHasApk()) window.WandexAndroid.stopSpeech(); }catch(e){}
+    try{ if(WM_VOICE.browserRec) WM_VOICE.browserRec.abort(); }catch(e){}
+    try{ if('speechSynthesis' in window) speechSynthesis.cancel(); }catch(e){}
+    WM_VOICE.browserRec = null;
+    wmVoiceUi('idle');
+  }
+  function wmVoiceToggle(){ if(WM_VOICE.on) wmVoiceStop(); else wmVoiceStart(); }
+  try{ document.addEventListener('visibilitychange', function(){ if(document.hidden){ try{ wmVoiceStop(); }catch(e){} } }); }catch(e){} /* v88-voicedlg */
 async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
     try{ window.__wmCmdMod = ''; var __cp = wmCmdParse(input.value || ''); if(__cp && __cp.local){ addMessage('ai', __cp.local, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } if(__cp && __cp.rest === '' && !__cp.wrapped){ if(pendingImages.length === 0){ addMessage('ai', __cp.usage, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } } if(__cp && __cp.wrapped){ window.__wmCmdMod = __cp.mod; input.value = __cp.wrapped; } else if(__cp && __cp.mod){ window.__wmCmdMod = __cp.mod; } }catch(eWC){} /* v74-slashcmd */
