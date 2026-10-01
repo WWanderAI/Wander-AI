@@ -549,13 +549,7 @@ return chain(0);
     border-radius:0;
   }
   .msg.ai.pending{color:var(--text-dim);font-style:italic;animation:wmMsgIn .38s cubic-bezier(.22,.8,.3,1) both, wmThinkPulse 1.8s ease-in-out .4s infinite;}
-.msg.pending::before{content:'';display:inline-block;width:24px;height:24px;vertical-align:-6px;align-self:center;background:no-repeat center/contain url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='none' stroke='%23B4863E' stroke-width='1.6'/><path d='M12 3.5v3.6M12 17v3.5M3.5 12h3.6M16.9 12h3.6' stroke='%23B4863E' stroke-width='1.6' stroke-linecap='round'/></svg>");} /* v80-compass */
-.msg.pending::after{content:'';display:inline-block;width:24px;height:24px;vertical-align:-6px;align-self:center;margin-left:-24px;margin-right:10px;background:no-repeat center/contain url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 4.5L14.4 12h-4.8z' fill='%23D64545'/><path d='M12 19.5L9.6 12h4.8z' fill='%239AA0B4'/><circle cx='12' cy='12' r='1.7' fill='%23B4863E' stroke='%231A1A1A' stroke-width='0.6'/></svg>");animation:wmNeedleSeek 2.6s ease-in-out infinite;} /* v80-compass */
-@keyframes wmNeedleSeek{0%{transform:rotate(-55deg);}25%{transform:rotate(38deg);}50%{transform:rotate(-24deg);}75%{transform:rotate(10deg);}100%{transform:rotate(-55deg);}} /* v80-compass */
-.msg.pending{display:flex;align-items:center;} /* v82-autoretry */
-.msg.pending::before{flex:none;} /* v82-autoretry */
-.msg.pending::after{flex:none;} /* v82-autoretry */
-.msg.pending>.msg-text{min-width:0;} /* v82-autoretry */
+/* v83-nocompass: компас убран, только текст */
   @keyframes wmThinkPulse{0%,100%{opacity:.6}50%{opacity:1}} /* v68-think */
   .msg.error{
     align-self:center;
