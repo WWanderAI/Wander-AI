@@ -1522,6 +1522,11 @@ return chain(0);
   .wm-imgskel .wm-sweep{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.14) 45%,rgba(255,255,255,.28) 50%,rgba(255,255,255,.14) 55%,transparent 70%);background-size:250% 250%;animation:wmSweep 1.9s linear infinite;}
   @keyframes wmSweep{from{background-position:120% 0;}to{background-position:-130% 0;}}
   .wm-imgskel .wm-st{position:absolute;left:8px;right:8px;bottom:10px;text-align:center;font:600 12.5px/1.3 var(--font-body);color:var(--text);text-shadow:0 1px 6px rgba(0,0,0,.55);}
+  .wm-searchskel{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid rgba(232,183,53,.45);border-radius:12px;background:rgba(232,183,53,.07);font:600 13px/1.4 var(--font-body);} /* v89-searchskel */
+  .wm-searchskel svg{width:22px;height:22px;flex:none;animation:wmSpulse 1.4s ease-in-out infinite;}
+  .wm-searchskel .wm-sst-t{background:linear-gradient(90deg,var(--text-dim) 25%,var(--amber) 50%,var(--text-dim) 75%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:wmShimmer 1.6s linear infinite;transition:opacity .19s ease;}
+  .wm-searchskel .wm-sst-s{color:var(--text-dim);opacity:.75;font-weight:500;white-space:nowrap;}
+  @keyframes wmSpulse{0%,100%{opacity:.65;transform:scale(1);}50%{opacity:1;transform:scale(1.12);}}
   .wm-img-reveal{animation:wmReveal .8s ease both;}
   @keyframes wmReveal{from{opacity:0;filter:blur(16px);transform:scale(1.035);}to{opacity:1;filter:blur(0);transform:scale(1);}}
   .wm-imgskel.wm-out{animation:wmSkelOut .5s ease both;}
@@ -4974,7 +4979,7 @@ async function handleSend(){
     setGenerating(true);
     manualStop = false;
     var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'web'; /* v63-stopgo */
-    const skel = wmImageSkeleton(pendingEl);
+    const skel = wmSearchSkeleton(pendingEl); /* v89-searchskel */
     const controller = new AbortController();
     activeStreamController = controller;
     const timeoutId = setTimeout(() => controller.abort(), 90 * 1000);
@@ -5094,6 +5099,36 @@ async function handleSend(){
     skel._st = 'Готовим холст…';
     stT.textContent = skel._st;
     stS.textContent = ' · 0 с';
+    return {
+      set(t){
+        if(skel._st === t) return;
+        skel._st = t;
+        stT.style.opacity = '0';
+        setTimeout(() => { stT.textContent = skel._st; stT.style.opacity = '1'; }, 190);
+      },
+      done(){ clearInterval(iv); },
+      el: skel
+    };
+  }
+
+  function wmSearchSkeleton(pendingEl){ /* v89-searchskel: компактный индикатор поиска, не путать с генерацией фото */
+    const tx = pendingEl.querySelector('.msg-text');
+    try{ const th = pendingEl.querySelector('.wm-think'); if(th) th.remove(); }catch(eT){}
+    const skel = document.createElement('div');
+    skel.className = 'wm-searchskel';
+    skel.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#e8b735" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span class="wm-sst-t"></span><span class="wm-sst-s"></span>';
+    const stT = skel.querySelector('.wm-sst-t');
+    const stS = skel.querySelector('.wm-sst-s');
+    tx.textContent = '';
+    tx.appendChild(skel);
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      if(!skel.isConnected){ clearInterval(iv); return; }
+      stS.textContent = '· ' + Math.round((Date.now() - t0) / 1000) + ' с';
+    }, 500);
+    skel._st = 'Ищу в интернете…';
+    stT.textContent = skel._st;
+    stS.textContent = '· 0 с';
     return {
       set(t){
         if(skel._st === t) return;
