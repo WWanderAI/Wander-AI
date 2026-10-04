@@ -2156,6 +2156,7 @@ main#chat{scroll-behavior:smooth;}
   const GEMINI_CHAT_URL = 'https://hazy-hamster-7342.wandexai.deno.net/gemini/v1beta/openai/chat/completions'; /* v58-relaypipe */
   const GEMINI_KEY = atob('QVEuQWI4Uk42TENnUVB6NTNkU0tpb2JNazYtYy01dzhhazFvdFY5OXMyNGs0U1VzbERGd0E=');
   const GEMINI_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  const WM_HORDE_MODELS = ["ICBINP - I Can't Believe It's Not Photography", "AlbedoBase XL 3.1", "stable_diffusion"]; /* v91-horde: бесплатный кластер перерисовки, ключей не надо */
   const MISTRAL_CHAT_URL = 'https://hazy-hamster-7342.wandexai.deno.net/mistral/v1/chat/completions'; /* v58-relaypipe */
   const MISTRAL_KEY = atob('bXN0cmxfOGV3ZUdjRlVkOHJJTkE0WkRLNmp1THozYWZqVW5vbGRfMmxjRmlS'); /* v57-mistral */
   const MISTRAL_MODELS = ['ministral-14b-latest', 'ministral-8b-latest', 'ministral-3b-latest', 'codestral-2508']; /* v57-mistral */
@@ -5240,22 +5241,26 @@ async function handleSend(){
     cx.drawImage(g, 0, 0, W, H);
     var id = cx.getImageData(0, 0, W, H), d = id.data, n = d.length, i, v;
     const auto = ops.indexOf('auto') >= 0;
+    var graphic = false;
+    if(auto){ /* v90.1-autofix: логотипы/графика (плоские сочные цвета) — уровни и vivid только портят */
+      let ss = 0, nn = 0;
+      for(let j = 0; j < n; j += 128){ const mx = Math.max(d[j], d[j + 1], d[j + 2]), mn = Math.min(d[j], d[j + 1], d[j + 2]); if(mx > 24){ ss += (mx - mn) / mx; nn++; } }
+      graphic = nn > 100 && (ss / nn) > 0.55;
+    }
     const has = (o) => auto || ops.indexOf(o) >= 0;
-    if(auto){ /* autolevels: растягиваем каждый канал по 0.5–99.5% */
-      for(let c = 0; c < 3; c++){
-        const hist = new Uint32Array(256);
-        for(i = c; i < n; i += 4) hist[d[i]]++;
-        const tot = W * H; let acc = 0, lo = 0, hi = 255;
-        for(let b = 0; b < 256; b++){ acc += hist[b]; if(acc > tot * 0.005){ lo = b; break; } }
-        acc = 0;
-        for(let b = 255; b >= 0; b--){ acc += hist[b]; if(acc > tot * 0.005){ hi = b; break; } }
-        if(hi > lo){ const k = 255 / (hi - lo); for(i = c; i < n; i += 4){ v = (d[i] - lo) * k; d[i] = v > 255 ? 255 : (v < 0 ? 0 : v); } }
-      }
+    if(auto && !graphic){ /* v90.1-autofix: уровни по ЯРКОСТИ (одна кривая на все каналы) — оттенок не уезжает */
+      const hist = new Uint32Array(256);
+      for(i = 0; i < n; i += 4) hist[(d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8]++;
+      const tot = W * H; let acc = 0, lo = 0, hi = 255;
+      for(let b = 0; b < 256; b++){ acc += hist[b]; if(acc > tot * 0.005){ lo = b; break; } }
+      acc = 0;
+      for(let b = 255; b >= 0; b--){ acc += hist[b]; if(acc > tot * 0.005){ hi = b; break; } }
+      if(hi > lo + 8){ const k = 255 / (hi - lo); for(i = 0; i < n; i += 4){ for(let c = 0; c < 3; c++){ v = (d[i + c] - lo) * k; d[i + c] = v > 255 ? 255 : (v < 0 ? 0 : v); } } }
     }
     if(ops.indexOf('brighten') >= 0){ for(i = 0; i < n; i += 4){ for(let c = 0; c < 3; c++){ v = 255 * Math.pow(d[i + c] / 255, 1 / 1.45); d[i + c] = v; } } }
     if(ops.indexOf('darken') >= 0){ for(i = 0; i < n; i += 4){ for(let c = 0; c < 3; c++){ v = 255 * Math.pow(d[i + c] / 255, 1.35); d[i + c] = v; } } }
     if(ops.indexOf('contrast') >= 0){ for(i = 0; i < n; i += 4){ for(let c = 0; c < 3; c++){ v = (d[i + c] - 128) * 1.28 + 128; d[i + c] = v; } } }
-    var sat = auto ? 1.22 : (ops.indexOf('vivid') >= 0 ? 1.32 : 1);
+    var sat = (auto && graphic) ? 1.0 : (auto ? 1.22 : (ops.indexOf('vivid') >= 0 ? 1.32 : 1));
     if(ops.indexOf('vintage') >= 0) sat = 0.85;
     if(sat !== 1){ for(i = 0; i < n; i += 4){ const gr = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114; d[i] += (d[i] - gr) * (sat - 1); d[i + 1] += (d[i + 1] - gr) * (sat - 1); d[i + 2] += (d[i + 2] - gr) * (sat - 1); } }
     if(ops.indexOf('warm') >= 0){ for(i = 0; i < n; i += 4){ d[i] *= 1.07; d[i + 2] *= 0.93; } }
@@ -5281,30 +5286,87 @@ async function handleSend(){
     }
     return cv.toDataURL('image/jpeg', 0.92);
   }
-  async function runPhotoEnhance(pendingEl, dataUrl, instruction, imgCount){ /* v90-photomode */
+  async function wmPhotoAiEdit(dataUrl, instruction, signal, onQueue){ /* v91-horde: перерисовка через AI Horde, null = недоступна */
+    let hordeId = null;
+    try{
+      const im = await new Promise((res, rej) => { const x = new Image(); x.onload = () => res(x); x.onerror = rej; x.src = dataUrl; });
+      const w0 = im.naturalWidth || im.width, h0 = im.naturalHeight || im.height;
+      const kk = Math.min(1, 512 / Math.max(w0, h0));
+      const W = Math.max(64, Math.round(w0 * kk / 64) * 64), H = Math.max(64, Math.round(h0 * kk / 64) * 64);
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      c.getContext('2d').drawImage(im, 0, 0, W, H);
+      const b64 = (c.toDataURL('image/jpeg', 0.85).split(',')[1]) || '';
+      if(!b64) return null;
+      var eng = String(instruction || '');
+      try{ eng = await translatePromptToEnglish(eng.slice(0, 300)); }catch(eT){}
+      const prompt = String(eng || instruction || 'enhance').slice(0, 400) + ', keep the same photo and composition';
+      const r = await fetch('https://stablehorde.net/api/v2/generate/async', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': '0000000000', 'Client-Agent': 'WandexAI:1:wandexaisupport@gmail.com' },
+        body: JSON.stringify({ prompt: prompt, params: { sampler_name: 'k_euler', steps: 25, width: W, height: H, denoising_strength: 0.62, cfg_scale: 7 }, source_image: b64, source_processing: 'img2img', models: WM_HORDE_MODELS, nsfw: false, censor_nsfw: true, shared: false, r2: true }),
+        signal: signal
+      });
+      if(!r.ok) return null;
+      const d = await r.json();
+      hordeId = d.id;
+      if(!hordeId) return null;
+      const t0 = Date.now();
+      while(Date.now() - t0 < 570 * 1000){
+        await new Promise(rr => setTimeout(rr, 8000));
+        if(signal && signal.aborted) throw new Error('aborted');
+        const ch = await fetch('https://stablehorde.net/api/v2/generate/check/' + hordeId, { signal: signal });
+        if(!ch.ok) continue;
+        const st = await ch.json();
+        if(st.faulted) return null;
+        if(st.done) break;
+        try{ if(onQueue) onQueue(st.queue_position || 0); }catch(eQ){}
+      }
+      const fs = await fetch('https://stablehorde.net/api/v2/generate/status/' + hordeId, { signal: signal });
+      if(!fs.ok) return null;
+      const sd = await fs.json();
+      const gen = (sd.generations || [])[0];
+      if(!gen || !gen.img) return null;
+      const br = await fetch(gen.img, { signal: signal });
+      if(!br.ok) return null;
+      const blob = await br.blob();
+      try{
+        const bmp = await createImageBitmap(blob);
+        const up = document.createElement('canvas');
+        up.width = bmp.width * 2; up.height = bmp.height * 2;
+        const ux = up.getContext('2d'); ux.imageSmoothingQuality = 'high';
+        ux.drawImage(bmp, 0, 0, up.width, up.height);
+        const b2 = await new Promise(rr => up.toBlob(rr, 'image/jpeg', 0.9));
+        if(b2) return URL.createObjectURL(b2);
+      }catch(eU){}
+      return URL.createObjectURL(blob);
+    }catch(e){
+      try{ if(hordeId && signal && signal.aborted){ fetch('https://stablehorde.net/api/v2/generate/status/' + hordeId, { method: 'DELETE' }); } }catch(eD){}
+      return null;
+    }
+  }
+  async function runPhotoEnhance(pendingEl, dataUrl, instruction, imgCount){ /* v90-photomode + v91-horde */
     const sendChatId = activeChatId;
     setGenerating(true);
     manualStop = false;
     var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'photo';
+    const controller = new AbortController();
+    activeStreamController = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 600 * 1000); /* v91-horde: очередь кластера */
     const skel = wmImageSkeleton(pendingEl);
-    try{
-      skel.set('Загружаю фото…');
-      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = dataUrl; });
-      if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
-      skel.set('Улучшаю фото…');
-      await new Promise(r => setTimeout(r, 40));
-      const ops = wmPhotoParse(instruction);
-      const outUrl = wmPhotoProcess(img, ops);
-      if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
-      var names = ops.map(o => WM_PHOTO_NAMES[o] || o).join(', ');
-      if(imgCount > 1) names += ' (взял первое фото)';
+    function renderPhoto(outUrl, label, histNote){
       try{ skel.done(); }catch(eS){}
       pendingEl.classList.remove('pending');
       const tx = pendingEl.querySelector('.msg-text');
       tx.textContent = '';
+      if(histNote){
+        const note = document.createElement('div');
+        note.style.cssText = 'font-size:12.5px;color:var(--text-dim);margin-bottom:6px;';
+        note.textContent = histNote;
+        tx.appendChild(note);
+      }
       const chip = document.createElement('div');
       chip.style.cssText = 'display:inline-block;font-size:11px;font-weight:600;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:2px 8px;margin-bottom:6px;opacity:.9;';
-      chip.textContent = 'Готово: ' + names;
+      chip.textContent = 'Готово: ' + label;
       tx.appendChild(chip);
       const im2 = document.createElement('img');
       im2.src = outUrl; im2.alt = 'Улучшенное фото';
@@ -5316,14 +5378,47 @@ async function handleSend(){
       dl.textContent = 'Скачать';
       dl.style.cssText = 'display:inline-block;font-size:11px;color:var(--amber);margin-top:6px;text-decoration:none;';
       tx.appendChild(dl);
-      if(myGen !== wmGenId) return;
       try{ sessionGallery.unshift({ url: outUrl, prompt: 'улучшенное фото', time: Date.now() }); }catch(eG){}
-      if(__wmGone(pendingEl, sendChatId)){ __wmSavebg(sendChatId, { role: 'assistant', content: '[фото улучшено: ' + names + ' — картинка не сохраняется между сессиями]' }); playNotifySound(); return; }
-      history.push({ role: 'assistant', content: '[фото улучшено: ' + names + ' — картинка не сохраняется между сессиями]' });
+      if(__wmGone(pendingEl, sendChatId)){ __wmSavebg(sendChatId, { role: 'assistant', content: '[фото: ' + label + ' — картинка не сохраняется между сессиями]' }); playNotifySound(); return; }
+      history.push({ role: 'assistant', content: '[фото: ' + label + ' — картинка не сохраняется между сессиями]' });
       saveState();
       chat.scrollTop = chat.scrollHeight;
+    }
+    try{
+      skel.set('Загружаю фото…');
+      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = dataUrl; });
+      if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
+      const ops = wmPhotoParse(instruction);
+      const hasText = String(instruction || '').trim().length > 0;
+      const onlyAuto = ops.length === 1 && ops[0] === 'auto';
+      const redraw = onlyAuto && /вместо|замен|поменяй|убери|удали|вырежи|добавь|дорисуй|вставь|преврати|сделай из|сотри|замажь|помести|перенеси|instead|replace|remove|delete|change .* to|background|add a/i.test(String(instruction || '')); /* v90.1-autofix */
+      const styleAsk = /стиль|стиле|аним|мульт|как у |нарисуй|перерисуй|кинематограф|art\b|(^|[\s,.!?])арт($|[\s,.!?])|фотореали/i.test(String(instruction || ''));
+      var aiFailed = false; /* v91-horde */
+      var names = ops.map(o => WM_PHOTO_NAMES[o] || o).join(', ');
+      if(imgCount > 1) names += ' (взял первое фото)';
+      if(hasText && (redraw || styleAsk)){ /* v91-horde: слова про правки = нейросеть */
+        skel.set('Нейросеть рисует…');
+        const aiUrl = await wmPhotoAiEdit(dataUrl, instruction, controller.signal, function(q){ try{ skel.set(q > 0 ? ('Очередь: ' + q + '…') : 'Нейросеть рисует…'); }catch(eSO){} });
+        if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
+        if(aiUrl){
+          clearTimeout(timeoutId);
+          renderPhoto(aiUrl, 'ИИ-правка: ' + String(instruction).trim().slice(0, 60), null);
+          return;
+        }
+        aiFailed = true;
+      }
+      skel.set('Улучшаю фото…');
+      await new Promise(r => setTimeout(r, 40));
+      const outUrl = wmPhotoProcess(img, ops);
+      if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
+      clearTimeout(timeoutId);
+      var note = null;
+      if(aiFailed) note = 'Нейросеть занята, вот автоулучшение:';
+
+      renderPhoto(outUrl, names, note);
     }catch(eP){
       if(myGen !== wmGenId) return;
+      clearTimeout(timeoutId);
       try{ pendingEl.remove(); }catch(e4){}
       if(!__wmGone(pendingEl, sendChatId)){ addMessage('error', 'Не вышло улучшить фото, попробуй другое.'); }
     }finally{
