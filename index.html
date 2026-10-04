@@ -2176,43 +2176,6 @@ main#chat{scroll-behavior:smooth;}
     }catch(eFM){}
     return WM_HORDE_MODELS.slice();
   }
-  let wmPuterLoading = null; /* v92-puter-flux: SDK загружаем только при настоящей ИИ-правке */
-  function wmPuterLoad(signal){
-    try{ if(window.puter && window.puter.ai && typeof window.puter.ai.txt2img === 'function') return Promise.resolve(true); }catch(e0){}
-    if(wmPuterLoading) return wmPuterLoading;
-    wmPuterLoading = new Promise(function(resolve, reject){
-      var done = false;
-      var timer = setTimeout(function(){ if(!done){ done = true; reject(new Error('Puter timeout')); } }, 12000);
-      var sc = document.createElement('script');
-      sc.src = 'https://js.puter.com/v2/';
-      sc.onload = function(){ clearTimeout(timer); if(done) return; done = true; try{ resolve(!!(window.puter && window.puter.ai && typeof window.puter.ai.txt2img === 'function')); }catch(e1){ resolve(false); } };
-      sc.onerror = function(){ clearTimeout(timer); if(done) return; done = true; reject(new Error('Puter SDK unavailable')); };
-      (document.head || document.documentElement).appendChild(sc);
-    }).catch(function(e){ wmPuterLoading = null; throw e; });
-    return wmPuterLoading;
-  }
-  async function wmPuterPhotoEdit(dataUrl, prompt, signal, onStatus){ /* v92-puter-flux: новая ИИ без нашего ключа */
-    try{
-      await wmPuterLoad(signal);
-      if(signal && signal.aborted) return null;
-      if(!window.puter || !window.puter.ai || typeof window.puter.ai.txt2img !== 'function') return null;
-      try{ if(onStatus) onStatus('FLUX приступает сразу…'); }catch(eS){}
-      const out = await window.puter.ai.txt2img(String(prompt || 'edit this image').slice(0, 700), {
-        model: 'black-forest-labs/flux-2-klein-9b-base',
-        input_image: dataUrl,
-        width: 512,
-        height: 512,
-        output_megapixels: '0.25'
-      });
-      if(signal && signal.aborted) return null;
-      const src = out && (out.src || (typeof out.getAttribute === 'function' ? out.getAttribute('src') : ''));
-      return src ? String(src) : null;
-    }catch(ePuter){
-      try{ window.__wmPuterLastError = String(ePuter && (ePuter.message || ePuter.code || ePuter) || 'unknown').slice(0, 180); }catch(e2){}
-      return null;
-    }
-  }
-
   const MISTRAL_CHAT_URL = 'https://hazy-hamster-7342.wandexai.deno.net/mistral/v1/chat/completions'; /* v58-relaypipe */
   const MISTRAL_KEY = atob('bXN0cmxfOGV3ZUdjRlVkOHJJTkE0WkRLNmp1THozYWZqVW5vbGRfMmxjRmlS'); /* v57-mistral */
   const MISTRAL_MODELS = ['ministral-14b-latest', 'ministral-8b-latest', 'ministral-3b-latest', 'codestral-2508']; /* v57-mistral */
@@ -5413,10 +5376,7 @@ async function handleSend(){
       var eng = String(instruction || '');
       try{ eng = await translatePromptToEnglish(eng.slice(0, 300)); }catch(eT){}
       const prompt = String(eng || instruction || 'enhance').slice(0, 400) + suffix;
-      const precisePrompt = 'Edit the provided input photo. Apply exactly this requested change and nothing else: ' + prompt + '. Preserve every other object, the background, camera angle, lighting, colors and composition. If an object is requested to be removed, reconstruct the area naturally. Return the edited image, not an explanation.'; /* v93-prompt */
       const fastModels = await modelPromise;
-      const puterUrl = await wmPuterPhotoEdit(dataUrl, precisePrompt, signal, function(st){ try{ if(onQueue) onQueue(0); }catch(eQS){} });
-      if(puterUrl) return puterUrl; /* v92-puter-flux: Horde только если новая ИИ недоступна */
       const r = await fetch('https://stablehorde.net/api/v2/generate/async', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': '0000000000', 'Client-Agent': 'WandexAI:1:wandexaisupport@gmail.com' },
@@ -5521,9 +5481,9 @@ async function handleSend(){
       var aiFailed = false; /* v91-horde */
       var names = ops.map(o => WM_PHOTO_NAMES[o] || o).join(', ');
       if(imgCount > 1) names += ' (взял первое фото)';
-      if(hasText && (redraw || styleAsk)){ /* v93-prompt: явная команда = только настоящая перерисовка, без ложного preview */
-        skel.set('Подключаю новую ИИ…');
-        const aiUrl = await wmPhotoAiEdit(dataUrl, instruction, controller.signal, function(q){ try{ skel.set(q > 0 ? 'Ищу резервный GPU…' : 'Новая ИИ редактирует фото…'); }catch(eSO){} });
+      if(hasText && (redraw || styleAsk)){ /* v94-no-login: явная команда = прямой img2img без аккаунта */
+        skel.set('Улучшаю фото…');
+        const aiUrl = await wmPhotoAiEdit(dataUrl, instruction, controller.signal, function(q){ try{ skel.set('Улучшаю фото…'); }catch(eSO){} });
         if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
         if(aiUrl){
           clearTimeout(timeoutId);
