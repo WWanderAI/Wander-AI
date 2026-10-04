@@ -2157,7 +2157,25 @@ main#chat{scroll-behavior:smooth;}
   const GEMINI_KEY = atob('QVEuQWI4Uk42TENnUVB6NTNkU0tpb2JNazYtYy01dzhhazFvdFY5OXMyNGs0U1VzbERGd0E=');
   const GEMINI_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
   const WM_PHOTO_HINT = 'Прикрепи фото — и я его улучшу. Можно добавить слова, например «сделай чётче и ярче», а можно без слов.'; /* v91.2-sysleak */
-  const WM_HORDE_MODELS = ["ICBINP - I Can't Believe It's Not Photography", "AlbedoBase XL 3.1", "stable_diffusion"]; /* v91-horde: бесплатный кластер перерисовки, ключей не надо */
+  const WM_HORDE_MODELS = ['stable_diffusion']; /* v91.3-fastlane: fallback — быстрый свободный worker, ключей не надо */
+  const WM_HORDE_CANDIDATES = ['stable_diffusion', 'DreamShaper XL', 'SDXL 1.0', "ICBINP - I Can't Believe It's Not Photography", 'AlbedoBase XL 3.1', 'AlbedoBase XL (SDXL)'];
+  async function wmHordeFastModels(signal, graphic){ /* v91.3-fastlane: выбираем живую модель с минимальным ETA, а не общий хвост */
+    try{
+      const r = await fetch('https://stablehorde.net/api/v2/status/models?type=image', { signal: signal });
+      if(r.ok){
+        const all = await r.json();
+        const rows = (Array.isArray(all) ? all : []).filter(function(x){ return x && WM_HORDE_CANDIDATES.indexOf(x.name) >= 0 && Number(x.count || 0) > 0; });
+        rows.sort(function(a,b){
+          const aj = Number(a.jobs || 0), bj = Number(b.jobs || 0);
+          const ae = Number(a.eta || 999999), be = Number(b.eta || 999999);
+          const ap = WM_HORDE_CANDIDATES.indexOf(a.name), bp = WM_HORDE_CANDIDATES.indexOf(b.name);
+          return (aj - bj) || (ae - be) || (ap - bp);
+        });
+        if(rows.length) return [rows[0].name];
+      }
+    }catch(eFM){}
+    return WM_HORDE_MODELS.slice();
+  }
   const MISTRAL_CHAT_URL = 'https://hazy-hamster-7342.wandexai.deno.net/mistral/v1/chat/completions'; /* v58-relaypipe */
   const MISTRAL_KEY = atob('bXN0cmxfOGV3ZUdjRlVkOHJJTkE0WkRLNmp1THozYWZqVW5vbGRfMmxjRmlS'); /* v57-mistral */
   const MISTRAL_MODELS = ['ministral-14b-latest', 'ministral-8b-latest', 'ministral-3b-latest', 'codestral-2508']; /* v57-mistral */
@@ -5320,13 +5338,15 @@ async function handleSend(){
       }catch(eG){}
       const denoise = graphic ? 0.75 : 0.62;
       const suffix = graphic ? ', flat vector style, clean geometric shapes' : ', keep the same photo and composition';
+      const modelPromise = wmHordeFastModels(signal, graphic); /* v91.3-fastlane: стартуем выбор worker параллельно с переводом */
       var eng = String(instruction || '');
       try{ eng = await translatePromptToEnglish(eng.slice(0, 300)); }catch(eT){}
       const prompt = String(eng || instruction || 'enhance').slice(0, 400) + suffix;
+      const fastModels = await modelPromise;
       const r = await fetch('https://stablehorde.net/api/v2/generate/async', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': '0000000000', 'Client-Agent': 'WandexAI:1:wandexaisupport@gmail.com' },
-        body: JSON.stringify({ prompt: prompt, params: { sampler_name: 'k_euler', steps: 25, width: W, height: H, denoising_strength: denoise, cfg_scale: 7 }, source_image: b64, source_processing: 'img2img', models: WM_HORDE_MODELS, nsfw: false, censor_nsfw: true, shared: false, r2: true }),
+        body: JSON.stringify({ prompt: prompt, params: { sampler_name: 'k_euler', steps: 25, width: W, height: H, denoising_strength: denoise, cfg_scale: 7 }, source_image: b64, source_processing: 'img2img', models: fastModels, nsfw: false, censor_nsfw: true, shared: false, slow_workers: false, extra_slow_workers: false, allow_downgrade: true, r2: true }),
         signal: signal
       });
       if(!r.ok) return null;
@@ -5335,7 +5355,7 @@ async function handleSend(){
       if(!hordeId) return null;
       const t0 = Date.now();
       while(Date.now() - t0 < 570 * 1000){
-        await new Promise(rr => setTimeout(rr, 8000));
+        await new Promise(rr => setTimeout(rr, 2000)); /* v91.3-fastlane: не теряем готовый результат */
         if(signal && signal.aborted) throw new Error('aborted');
         const ch = await fetch('https://stablehorde.net/api/v2/generate/check/' + hordeId, { signal: signal });
         if(!ch.ok) continue;
@@ -5374,9 +5394,9 @@ async function handleSend(){
     var myGen = ++wmGenId; wmPendingEl = pendingEl; wmRunner = 'photo';
     const controller = new AbortController();
     activeStreamController = controller;
-    const timeoutId = setTimeout(() => controller.abort(), 600 * 1000); /* v91-horde: очередь кластера */
+    const timeoutId = setTimeout(() => controller.abort(), 600 * 1000); /* v91.3-fastlane: короткий таймаут с быстрым worker */
     const skel = wmImageSkeleton(pendingEl);
-    function renderPhoto(outUrl, label, histNote){
+    function renderPhoto(outUrl, label, histNote, preview){ /* v91.3-fastlane: preview=true не закрывает фоновую ИИ-правку */
       try{ skel.done(); }catch(eS){}
       pendingEl.classList.remove('pending');
       const tx = pendingEl.querySelector('.msg-text');
@@ -5389,7 +5409,7 @@ async function handleSend(){
       }
       const chip = document.createElement('div');
       chip.style.cssText = 'display:inline-block;font-size:11px;font-weight:600;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:2px 8px;margin-bottom:6px;opacity:.9;';
-      chip.textContent = 'Готово: ' + label;
+      chip.textContent = preview ? ('Быстрый результат: ' + label) : ('Готово: ' + label);
       tx.appendChild(chip);
       const im2 = document.createElement('img');
       im2.src = outUrl; im2.alt = 'Улучшенное фото';
@@ -5401,6 +5421,14 @@ async function handleSend(){
       dl.textContent = 'Скачать';
       dl.style.cssText = 'display:inline-block;font-size:11px;color:var(--amber);margin-top:6px;text-decoration:none;';
       tx.appendChild(dl);
+      if(preview){
+        const wait = document.createElement('div');
+        wait.style.cssText = 'font-size:12px;color:var(--text-dim);margin-top:7px;';
+        wait.textContent = 'Нейросеть уже запущена — финальная перерисовка заменит этот быстрый результат автоматически';
+        tx.appendChild(wait);
+        chat.scrollTop = chat.scrollHeight;
+        return;
+      }
       try{ sessionGallery.unshift({ url: outUrl, prompt: 'улучшенное фото', time: Date.now() }); }catch(eG){}
       if(__wmGone(pendingEl, sendChatId)){ __wmSavebg(sendChatId, { role: 'assistant', content: '[фото: ' + label + ' — картинка не сохраняется между сессиями]' }); playNotifySound(); return; }
       history.push({ role: 'assistant', content: '[фото: ' + label + ' — картинка не сохраняется между сессиями]' });
@@ -5420,8 +5448,13 @@ async function handleSend(){
       var names = ops.map(o => WM_PHOTO_NAMES[o] || o).join(', ');
       if(imgCount > 1) names += ' (взял первое фото)';
       if(hasText && (redraw || styleAsk)){ /* v91-horde: слова про правки = нейросеть */
-        skel.set('Нейросеть рисует…');
-        const aiUrl = await wmPhotoAiEdit(dataUrl, instruction, controller.signal, function(q){ try{ skel.set(q > 0 ? ('Очередь: ' + q + '…') : 'Нейросеть рисует…'); }catch(eSO){} });
+        let quickUrl = null;
+        try{
+          quickUrl = wmPhotoProcess(img, ops);
+          renderPhoto(quickUrl, 'автоулучшение без ожидания', 'Нейросеть запускается сразу', true);
+        }catch(eQF){}
+        skel.set('Нейросеть приступает сразу…');
+        const aiUrl = await wmPhotoAiEdit(dataUrl, instruction, controller.signal, function(q){ try{ skel.set(q > 0 ? 'Ищу свободный GPU…' : 'Нейросеть уже рисует…'); }catch(eSO){} });
         if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
         if(aiUrl){
           clearTimeout(timeoutId);
