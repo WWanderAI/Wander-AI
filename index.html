@@ -2198,7 +2198,7 @@ main#chat{scroll-behavior:smooth;}
       if(!window.puter || !window.puter.ai || typeof window.puter.ai.txt2img !== 'function') return null;
       try{ if(onStatus) onStatus('FLUX приступает сразу…'); }catch(eS){}
       const out = await window.puter.ai.txt2img(String(prompt || 'edit this image').slice(0, 700), {
-        model: 'black-forest-labs/flux-2-klein-4b',
+        model: 'black-forest-labs/flux-2-klein-9b-base',
         input_image: dataUrl,
         width: 512,
         height: 512,
@@ -2305,13 +2305,37 @@ main#chat{scroll-behavior:smooth;}
   let wmGenId = 0; /* v63-stopgo: поколение генерации */
   let wmPendingEl = null; /* v63-stopgo */
   let wmRunner = null; /* v63-stopgo: chat|web|image|video */
+  function wmSecretScrub(t){ /* v93-safety: секреты не должны попадать в поле, историю или ИИ */
+    return String(t == null ? '' : t).replace(/(?:github_pat_|ghp_|gho_|ghu_|ghs_|ghr_)[A-Za-z0-9_]+/gi, '').replace(/[ \t]{2,}/g, ' ').trim();
+  }
+  function wmScrubHistory(hist){
+    try{
+      if(!Array.isArray(hist)) return hist;
+      hist.forEach(function(e){
+        if(!e) return;
+        if(typeof e.content === 'string'){ e.content = wmSecretScrub(e.content); return; }
+        if(Array.isArray(e.content)) e.content.forEach(function(b){ if(b && b.type === 'text') b.text = wmSecretScrub(b.text); });
+      });
+    }catch(e){}
+    return hist;
+  }
 
   const SEND_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
   const STOP_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>';
 
   function setGenerating(state){
     isGenerating = state;
-    sendBtn.disabled = false;
+    /* v93-lock: во время фото/ИИ нельзя дописывать, прикреплять или включать микрофон */
+    try{
+      input.readOnly = !!state;
+      input.setAttribute('aria-disabled', state ? 'true' : 'false');
+      input.classList.toggle('wm-busy-input', !!state);
+      attachBtn.disabled = !!state;
+      micBtn.disabled = !!state;
+      fileInput.disabled = !!state;
+      if(state) input.blur();
+    }catch(eL){}
+    sendBtn.disabled = false; /* кнопка остаётся только как Стоп */
     sendBtn.classList.toggle('stop-mode', state);
     sendBtn.setAttribute('aria-label', state ? 'Остановить' : 'Отправить');
     sendBtn.innerHTML = state ? STOP_ICON_SVG : SEND_ICON_SVG;
@@ -2603,6 +2627,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
   }
 
   function saveState(){
+    wmScrubHistory(history); /* v93-safety */
     const c = findChat(activeChatId);
     if(c){
       c.history = history;
@@ -2885,6 +2910,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
   }
 
   function renderMessagesFromHistory(hist){
+    wmScrubHistory(hist); /* v93-safety */
     chat.innerHTML = '';
     if(hist.length === 0){
       const div = document.createElement('div');
@@ -2899,7 +2925,7 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
         const blocks = Array.isArray(entry.content) ? entry.content : [{ type: 'text', text: entry.content }];
         const images = blocks.filter(b => b.type === 'image').map(b => { const f = imgFields(b); return 'data:' + f.media_type + ';base64,' + f.data; });
         const textBlock = blocks.find(b => b.type === 'text');
-        const userText = textBlock ? textBlock.text : '';
+        const userText = textBlock ? wmSecretScrub(textBlock.text) : '';
         const userDiv = addMessage('user', userText, { images });
         userDiv.dataset.historyIndex = idx;
         addUserActions(userDiv, userText, idx);
@@ -3718,7 +3744,13 @@ s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
       box.style.display = 'flex';
     }catch(e){}
   }
-  input.addEventListener('input', function(){ try{ clearTimeout(wmSuggTimer); wmSuggTimer = setTimeout(wmSuggRefresh, 350); }catch(e){} }); /* v65-promptboost */
+  input.addEventListener('input', function(){
+    try{
+      const clean = wmSecretScrub(input.value);
+      if(clean !== input.value) input.value = clean;
+      clearTimeout(wmSuggTimer); wmSuggTimer = setTimeout(wmSuggRefresh, 350);
+    }catch(e){}
+  }); /* v65-promptboost + v93-safety */
 
   input.addEventListener('keydown', (e) => {
     if(e.key === 'Enter' && !e.shiftKey){
@@ -4835,7 +4867,9 @@ function wmThinkStart(bubble){
 async function handleSend(){
     try{ wmSuggHide(); }catch(e){} /* v65-promptboost */
     try{ window.__wmCmdMod = ''; var __cp = wmCmdParse(input.value || ''); if(__cp && __cp.local){ addMessage('ai', __cp.local, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } if(__cp && __cp.rest === '' && !__cp.wrapped){ if(pendingImages.length === 0){ addMessage('ai', __cp.usage, {}); wmDraftScrub(input.value); input.value = ''; input.style.height = 'auto'; return; } } if(__cp && __cp.wrapped){ window.__wmCmdMod = __cp.mod; input.value = __cp.wrapped; } else if(__cp && __cp.mod){ window.__wmCmdMod = __cp.mod; } }catch(eWC){} /* v74-slashcmd */
-    const text = input.value.trim();
+    const __rawText = input.value.trim();
+    const text = wmSecretScrub(__rawText);
+    if(text !== __rawText){ try{ input.value = text; }catch(eSS){} }
     const images = pendingImages.slice();
     const files = pendingFiles.slice(); /* v84-attach */
     if(currentMode === 'photo' && !text && images.length === 0 && files.length === 0){ try{ wmAttachGo('photo'); }catch(eAP0){} return; } /* v90-photomode */
@@ -5379,8 +5413,9 @@ async function handleSend(){
       var eng = String(instruction || '');
       try{ eng = await translatePromptToEnglish(eng.slice(0, 300)); }catch(eT){}
       const prompt = String(eng || instruction || 'enhance').slice(0, 400) + suffix;
+      const precisePrompt = 'Edit the provided input photo. Apply exactly this requested change and nothing else: ' + prompt + '. Preserve every other object, the background, camera angle, lighting, colors and composition. If an object is requested to be removed, reconstruct the area naturally. Return the edited image, not an explanation.'; /* v93-prompt */
       const fastModels = await modelPromise;
-      const puterUrl = await wmPuterPhotoEdit(dataUrl, prompt, signal, function(st){ try{ if(onQueue) onQueue(0); }catch(eQS){} });
+      const puterUrl = await wmPuterPhotoEdit(dataUrl, precisePrompt, signal, function(st){ try{ if(onQueue) onQueue(0); }catch(eQS){} });
       if(puterUrl) return puterUrl; /* v92-puter-flux: Horde только если новая ИИ недоступна */
       const r = await fetch('https://stablehorde.net/api/v2/generate/async', {
         method: 'POST',
@@ -5486,14 +5521,9 @@ async function handleSend(){
       var aiFailed = false; /* v91-horde */
       var names = ops.map(o => WM_PHOTO_NAMES[o] || o).join(', ');
       if(imgCount > 1) names += ' (взял первое фото)';
-      if(hasText && (redraw || styleAsk)){ /* v91-horde: слова про правки = нейросеть */
-        let quickUrl = null;
-        try{
-          quickUrl = wmPhotoProcess(img, ops);
-          renderPhoto(quickUrl, 'автоулучшение без ожидания', 'Нейросеть запускается сразу', true);
-        }catch(eQF){}
+      if(hasText && (redraw || styleAsk)){ /* v93-prompt: явная команда = только настоящая перерисовка, без ложного preview */
         skel.set('Подключаю новую ИИ…');
-        const aiUrl = await wmPhotoAiEdit(dataUrl, instruction, controller.signal, function(q){ try{ skel.set(q > 0 ? 'Ищу свободный GPU…' : 'Нейросеть уже рисует…'); }catch(eSO){} });
+        const aiUrl = await wmPhotoAiEdit(dataUrl, instruction, controller.signal, function(q){ try{ skel.set(q > 0 ? 'Ищу резервный GPU…' : 'Новая ИИ редактирует фото…'); }catch(eSO){} });
         if(myGen !== wmGenId || manualStop){ try{pendingEl.remove();}catch(e){} return; }
         if(aiUrl){
           clearTimeout(timeoutId);
