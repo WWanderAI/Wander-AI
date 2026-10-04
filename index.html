@@ -2156,6 +2156,7 @@ main#chat{scroll-behavior:smooth;}
   const GEMINI_CHAT_URL = 'https://hazy-hamster-7342.wandexai.deno.net/gemini/v1beta/openai/chat/completions'; /* v58-relaypipe */
   const GEMINI_KEY = atob('QVEuQWI4Uk42TENnUVB6NTNkU0tpb2JNazYtYy01dzhhazFvdFY5OXMyNGs0U1VzbERGd0E=');
   const GEMINI_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  const WM_PHOTO_HINT = 'Прикрепи фото — и я его улучшу. Можно добавить слова, например «сделай чётче и ярче», а можно без слов.'; /* v91.2-sysleak */
   const WM_HORDE_MODELS = ["ICBINP - I Can't Believe It's Not Photography", "AlbedoBase XL 3.1", "stable_diffusion"]; /* v91-horde: бесплатный кластер перерисовки, ключей не надо */
   const MISTRAL_CHAT_URL = 'https://hazy-hamster-7342.wandexai.deno.net/mistral/v1/chat/completions'; /* v58-relaypipe */
   const MISTRAL_KEY = atob('bXN0cmxfOGV3ZUdjRlVkOHJJTkE0WkRLNmp1THozYWZqVW5vbGRfMmxjRmlS'); /* v57-mistral */
@@ -4792,18 +4793,31 @@ async function handleSend(){
     const mode = MODES[currentMode];
 
     if(mode && mode.isPhotoMode){ /* v90-photomode */
+      let pText = text; /* v91.2-sysleak: срезаем SYS/РЕЖИМ-префиксы как в видео-ветке */
+      try{
+        if(window.__wmStrip) pText = window.__wmStrip(pText) || pText;
+        if(window.__wandexSiteStrip) pText = window.__wandexSiteStrip(pText) || pText;
+      }catch(ePS){}
+      pText = String(pText || '').trim();
+      const pFb = wmFileBlock(files, pText);
       if(images.length === 0){
-        if(!text){ try{ wmAttachGo('photo'); }catch(eAP){} return; }
-        addMessage('ai', 'Прикрепи фото — и я его улучшу. Можно добавить слова, например «сделай чётче и ярче», а можно без слов.', {});
+        if(!pText){ try{ wmAttachGo('photo'); }catch(eAP){} return; }
+        try{
+          const __kids = chat.children, __last = __kids[__kids.length - 1];
+          if(!(__last && __last.classList && __last.classList.contains('ai') && (__last.textContent || '').indexOf('Прикрепи фото — и я его улучшу') >= 0)){
+            addMessage('ai', WM_PHOTO_HINT, {});
+          }
+        }catch(eH){ addMessage('ai', WM_PHOTO_HINT, {}); }
+        input.value = pText;
         return;
       }
-      const __phUser = addMessage('user', dispText, { images: images.map(i => i.previewUrl) });
+      const __phUser = addMessage('user', pFb.disp, { images: images.map(i => i.previewUrl) });
       const __phBlocks = images.map(img => ({ type: 'image', media_type: img.media_type, data: img.data }));
-      if(fullText) __phBlocks.push({ type: 'text', text: fullText });
+      if(pFb.full) __phBlocks.push({ type: 'text', text: pFb.full });
       history.push({ role: 'user', content: __phBlocks });
       const __phIdx = history.length - 1;
       __phUser.dataset.historyIndex = __phIdx;
-      addUserActions(__phUser, dispText, __phIdx);
+      addUserActions(__phUser, pFb.disp, __phIdx);
       saveState();
       wmDraftScrub(input.value); input.value = '';
       input.style.height = 'auto';
@@ -4812,7 +4826,7 @@ async function handleSend(){
       renderAttachPreview();
       sendBtn.disabled = true;
       const pendingEl = addMessage('ai', 'Улучшаю фото…', { pending: true });
-      await runPhotoEnhance(pendingEl, images[0].previewUrl, fullText || text, images.length);
+      await runPhotoEnhance(pendingEl, images[0].previewUrl, pFb.full || pText, images.length);
       sendBtn.disabled = false;
       return;
     }
@@ -5297,13 +5311,22 @@ async function handleSend(){
       c.getContext('2d').drawImage(im, 0, 0, W, H);
       const b64 = (c.toDataURL('image/jpeg', 0.85).split(',')[1]) || '';
       if(!b64) return null;
+      var graphic = false; /* v91.1-hordetune: графика = сильнее перерисовка + векторный суффикс */
+      try{
+        const px = c.getContext('2d').getImageData(0, 0, W, H).data;
+        let ss = 0, nn = 0;
+        for(let j = 0; j < px.length; j += 64){ const mx = Math.max(px[j], px[j + 1], px[j + 2]), mn = Math.min(px[j], px[j + 1], px[j + 2]); if(mx > 24){ ss += (mx - mn) / mx; nn++; } }
+        graphic = nn > 100 && (ss / nn) > 0.55;
+      }catch(eG){}
+      const denoise = graphic ? 0.75 : 0.62;
+      const suffix = graphic ? ', flat vector style, clean geometric shapes' : ', keep the same photo and composition';
       var eng = String(instruction || '');
       try{ eng = await translatePromptToEnglish(eng.slice(0, 300)); }catch(eT){}
-      const prompt = String(eng || instruction || 'enhance').slice(0, 400) + ', keep the same photo and composition';
+      const prompt = String(eng || instruction || 'enhance').slice(0, 400) + suffix;
       const r = await fetch('https://stablehorde.net/api/v2/generate/async', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': '0000000000', 'Client-Agent': 'WandexAI:1:wandexaisupport@gmail.com' },
-        body: JSON.stringify({ prompt: prompt, params: { sampler_name: 'k_euler', steps: 25, width: W, height: H, denoising_strength: 0.62, cfg_scale: 7 }, source_image: b64, source_processing: 'img2img', models: WM_HORDE_MODELS, nsfw: false, censor_nsfw: true, shared: false, r2: true }),
+        body: JSON.stringify({ prompt: prompt, params: { sampler_name: 'k_euler', steps: 25, width: W, height: H, denoising_strength: denoise, cfg_scale: 7 }, source_image: b64, source_processing: 'img2img', models: WM_HORDE_MODELS, nsfw: false, censor_nsfw: true, shared: false, r2: true }),
         signal: signal
       });
       if(!r.ok) return null;
